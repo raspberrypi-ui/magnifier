@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ $UID != 0 ]; then
+	echo "You must be superuser to install MouseLoupe!"
+	exit 1
+fi
+
+
+echo "Copying the program files..."
+install -m 755 mouseloupe /usr/local/bin
+install -m 755 mouseloupegui /usr/local/bin
+install -m 744 mouseloupe.1.gz /usr/share/man/man1
+install -m 744 mouseloupe.1.gz /usr/man/man1
+echo "Done"

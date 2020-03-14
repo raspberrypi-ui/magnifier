@@ -1,0 +1,280 @@
+#!/usr/bin/wish
+
+#/*******************************************************************************
+#*										*
+#* mouseloupegui -- MouseLoupe GUI						*
+#*										*
+#* Copyright (C) 2001-2005 Luciano Silva					*
+#*										*
+#* This is free software; you can redistribute it and/or modify it under the	*
+#* terms of the GNU General Public License as published by the Free Software    *
+#* Foundation; either version 2 of the License, or (at your option) any later   *
+#* version.See README for details.       		                        *
+#*                                                                              *
+#* This software is distributed in the hope that it will be useful, but WITHOUT *
+#* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or        *
+#* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License        *
+#* for more details.							        *
+#* 									        *
+#* You should have received a copy of the GNU General Public License along with *
+#* software; if not, write to the Free Software Foundation, Inc., 59 Temple     *
+#* Place, Suite 330, Boston, MA  02111-1307 USA		                        *
+#*									        *
+#* MouseLoupe - Screen Magnifier					        *
+#* Jul, 2001								        *
+#*									        *
+#* Written by Dr. Prof. Luciano Silva			luciano@inf.ufpr.br     *
+#*									        *
+#* Modifications:							        *
+#*									        *
+#*   21 Dec 2004 - Fabio Leite Vieira			flv03@inf.ufpr.br       *
+#*		 - Mauricley Ribas Azevedo 		mra03@inf.ufpr.br       *
+#*		 - Thiago de Souza Ferreira 		tsf03@inf.ufpr.br       *
+#*******************************************************************************/
+
+toplevel .main
+wm withdraw .
+wm title .main "MouseLoupe"
+wm resizable .main 0 0
+wm geometry .main +2001+0
+wm protocol .main WM_DELETE_WINDOW {Exit}
+
+global useFilter
+global MoveMouse
+global shape
+global zoomtext
+global diametertext
+global widthtext
+global heighttext
+global zoom
+global diameter
+global width
+global height
+
+set useFilter 0
+set shape 0
+set zoom 2.0
+set width 350
+set height 350
+set diameter 350
+
+exec /usr/local/bin/mouseloupe &
+
+label .main.titlelbl -text "MouseLoupe" -relief sunken
+
+frame .main.frameoption -relief groove -borderwidth 2
+checkbutton .main.frameoption.filter -text "Bilinear Filter" -variable useFilter -onvalue 1
+checkbutton .main.frameoption.move -text "Typing Movement" -variable MoveMouse -onvalue 1
+
+frame .main.frameshape -relief groove -borderwidth 2
+label .main.frameshape.shapelbl -text "Shape"
+checkbutton .main.frameshape.circle \
+		-text "Circle" \
+		-variable shape \
+		-onvalue 0 -command \
+		{.main.framesize.diameter configure -state normal; \
+		 .main.framesize.width configure -state disabled; \
+		 .main.framesize.height configure -state disabled; \
+		 .main.framesize.diameterlbl configure -state normal; \
+		 .main.framesize.widthlbl configure -state disabled; \
+		 .main.framesize.heightlbl configure -state disabled; \
+		 .main.framesize.diametervl configure -state normal; \
+		 .main.framesize.widthvl configure -state disabled; \
+		 .main.framesize.heightvl configure -state disabled}
+		 
+checkbutton .main.frameshape.rectangle \
+		-text "Rectangle" \
+		-variable shape \
+		-onvalue 1 -command { set shape 1; \
+		.main.framesize.diameter configure -state disabled; \
+		.main.framesize.width configure -state normal; \
+		.main.framesize.height configure -state normal; \
+		.main.framesize.diameterlbl configure -state disabled; \
+		.main.framesize.widthlbl configure -state normal; \
+		.main.framesize.heightlbl configure -state normal; \
+		.main.framesize.diametervl configure -state disabled; \
+		.main.framesize.widthvl configure -state normal; \
+		.main.framesize.heightvl configure -state normal} 
+
+frame .main.framesize -relief groove -borderwidth 2
+label .main.framesize.sizelbl -text "Size"
+if {$shape == 0} {
+	scale .main.framesize.diameter -orient horizontal \
+		-from 100 -to 600 -resolution 10 \
+		-variable diameter -showvalue 0 -command {diameter:move}
+	label .main.framesize.diametervl -textvariable diametertext -anchor s -state normal
+	
+	scale .main.framesize.width -orient horizontal \
+		-from 100 -to 800 -resolution 10 \
+		-variable width -showvalue 0 -command {width:move}
+	label .main.framesize.widthvl -textvariable widthtext -anchor s -state disabled
+		
+	scale .main.framesize.height -orient horizontal \
+		-from 100 -to 600 -resolution 10 \
+		-variable height -showvalue 0 -command {height:move}
+	label .main.framesize.heightvl -textvariable heighttext -anchor s -state disabled
+	
+	label .main.framesize.diameterlbl -text "Diameter" -state normal
+	label .main.framesize.widthlbl -text "Width" -state disabled
+	label .main.framesize.heightlbl -text "Height" -state disabled
+} else {
+	scale .main.framesize.diameter -orient horizontal \
+		-from 100 -to 600 -resolution 10 \
+		-variable diameter -showvalue 0  \
+		-state disabled -command {diameter:move}
+	label .main.framesize.diametervl -textvariable diametertext -anchor s -state disabled
+	
+	scale .main.framesize.width -orient horizontal \
+		-from 100 -to 800 -resolution 10 \
+		-variable width -showvalue 0 -command {width:move}
+	label .main.framesize.widthvl -textvariable widthtext -anchor s -state normal
+	
+	scale .main.framesize.height -orient horizontal \
+		-from 100 -to 600 -resolution 10 \
+		-variable height -showvalue 0 -command {height:move}
+	label .main.framesize.heightvl -textvariable heighttext -anchor s -state normal
+	
+	label .main.framesize.diameterlbl -text "Diameter" -state disabled
+	label .main.framesize.widthlbl -text "Width" -state normal
+	label .main.framesize.heightlbl -text "Height" -state normal
+}
+
+
+frame .main.framezoom -relief groove -borderwidth 2
+label .main.framezoom.zoomlbl -text "Zoom"
+scale .main.framezoom.zoom -orient horizontal \
+	-from 2 -to 16 -resolution 0.1 \
+	-variable zoom -showvalue 0  -command {zoom:move}
+label .main.framezoom.zoomvl -textvariable zoomtext -anchor s
+
+button .main.apply -text "Apply" -command {Apply}
+button .main.about -text "About" -command {AboutWindow}
+button .main.exit -text "Exit" -command {Exit}
+
+proc diameter:move {diameter} {
+	global diametertext
+	set diametertext "$diameter"
+}
+
+proc width:move {width} {
+	global widthtext
+	set widthtext "$width"
+}
+
+proc height:move {height} {
+	global heighttext
+	set heighttext "$height"
+}
+
+proc zoom:move {zoom} {
+	global zoomtext
+	set zoomtext "$zoom"
+}
+
+proc AboutWindow {} {
+	toplevel .main.aboutwindow
+	wm title .main.aboutwindow "About"
+	wm resizable .main.aboutwindow
+	text .main.aboutwindow.text -width 40 -height 7 -wrap word -font {Courier 14}
+	.main.aboutwindow.text tag configure big -font {Courier 24 bold} -justify center	
+	.main.aboutwindow.text tag configure center -justify center
+	button .main.aboutwindow.ok -text "Close" -command {destroy .main.aboutwindow}
+	.main.aboutwindow.text insert end "MouseLoupe\n" big
+	.main.aboutwindow.text insert end "v0.6\n\n" center
+	.main.aboutwindow.text insert end "mouseloupe@gmail.com\n" center
+	.main.aboutwindow.text insert end "http://seurat.inf.ufpr.br/imago/mouseloupe" center
+	pack .main.aboutwindow.text -fill both
+	
+	pack .main.aboutwindow.ok
+}
+
+proc Apply {} {
+	global shape
+	global zoom
+	global width
+	global height
+	global diameter
+	global useFilter
+	global MoveMouse
+		
+	exec killall -9 mouseloupe
+		
+	if {$shape == 0} {
+		if {$useFilter == 1} {
+			if {$MoveMouse == 1} {
+				exec /usr/local/bin/mouseloupe -c $diameter -z $zoom -f -m &
+			} else {
+				exec /usr/local/bin/mouseloupe -c $diameter -z $zoom -f &
+			}
+		} else {
+			if {$MoveMouse == 1} {
+				exec /usr/local/bin/mouseloupe -c $diameter -z $zoom -m &
+			} else {
+				exec /usr/local/bin/mouseloupe -c $diameter -z $zoom &
+			}
+		}
+	} else {
+		if {$useFilter == 1} {
+			if {$MoveMouse == 1} {
+				exec /usr/local/bin/mouseloupe -r $width $height -z $zoom -f -m &
+			} else {
+				exec /usr/local/bin/mouseloupe -r $width $height -z $zoom -f &
+			}
+		} else {
+			if {$MoveMouse == 1} {
+				exec /usr/local/bin/mouseloupe -r $width $height -z $zoom -m &
+			} else {
+				exec /usr/local/bin/mouseloupe -r $width $height -z $zoom &
+			}
+		}
+	}
+}
+
+proc Exit {} {
+	exec killall -9 mouseloupe
+	exit
+}
+
+#### TITLE #####
+pack .main.titlelbl -fill both -expand 1
+################
+
+#### ZOOM ####
+pack .main.framezoom -fill both -padx 5 -pady 5
+pack .main.framezoom.zoomlbl -anchor center
+pack .main.framezoom.zoom -fill x
+pack .main.framezoom.zoomvl -anchor center
+##############
+
+#### SHAPE ####
+pack .main.frameshape -fill both -padx 5 -pady 5
+pack .main.frameshape.shapelbl -anchor center -side top
+pack .main.frameshape.circle -side left -expand 1
+pack .main.frameshape.rectangle -side left -expand 1
+###############
+
+#### SIZE ####
+pack .main.framesize -fill both -padx 5 -pady 5
+pack .main.framesize.sizelbl -side top -anchor center
+pack .main.framesize.diameterlbl -anchor w
+pack .main.framesize.diameter -fill x
+pack .main.framesize.diametervl -anchor center 
+pack .main.framesize.widthlbl -anchor w
+pack .main.framesize.width -anchor w -fill x
+pack .main.framesize.widthvl -anchor center
+pack .main.framesize.heightlbl -anchor w
+pack .main.framesize.height -anchor w -fill x
+pack .main.framesize.heightvl -anchor center
+##############
+
+#### OPTIONS ####
+pack .main.frameoption -padx 5 -pady 5 -fill both
+pack .main.frameoption.filter -side top -anchor w
+pack .main.frameoption.move -side bottom -anchor w
+################
+
+#### BUTTONS ####
+pack .main.exit -side bottom -fill x
+pack .main.apply -fill both -side left -expand 1
+pack .main.about -fill both -side left -expand 1
+#################
