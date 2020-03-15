@@ -38,9 +38,7 @@ CC = gcc -g -Wunused -Wall -O4
 
 LDFLAGS =  -L/usr/X11R6/lib -lXext -lX11 -lm $(LIBS)
 
-CFLAGS = -o $@ -c -I/usr/X11R6/include -Dlinux -D__i386__ -D_POSIX_C_SOURCE=199309L \
-	-D_POSIX_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE     -DFUNCPROTO=15 -DNARROWPROTO -fomit-frame-pointer \
-	-D_XOPEN_SOURCE
+CFLAGS = -o $@ -c -I/usr/X11R6/include -Dlinux -DFUNCPROTO=15 -DNARROWPROTO -fomit-frame-pointer
 
 
 PROG =	./mouseloupe

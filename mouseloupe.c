@@ -365,7 +365,7 @@ void SetDefault (void){
 *					strtof
 ****************************************************************************************/
 
-double strtof (char *str){
+double _strtof (char *str){
 int len;
 	len = strlen (str);
 	if (strspn (str, "0123456789.") == len)
@@ -542,7 +542,7 @@ Opens a screen magnifier under the mouse pointer.\n\n \
 							if (argv[i+1][0] != '-'){
 								i++;
 								if (magstep == 0){
-									if (!(magstep = strtof (argv[i]))){
+									if (!(magstep = _strtof (argv[i]))){
 										fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i-1][1]);
 										exit (EXIT_FAILURE);
 									}
