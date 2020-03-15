@@ -191,6 +191,7 @@ void get_image(){
 	Window root, child;
 	int xr, yr, xgrab, ygrab, xp, yp;
 	unsigned int wh, ww, mask, bw, d;
+	int sx, sy, sw, sh, dx, dy;
 
 	XSetForeground(dsp, gc, 0);
 	XFillRectangle(dsp, srcpixmap, gc, 0, 0, srcw, srch);
@@ -198,40 +199,35 @@ void get_image(){
 	XQueryPointer (dsp, winfocus, &root, &child, &xr, &yr, &xgrab, &ygrab, &mask);
 	XGetGeometry (dsp, winfocus, &root, &xp, &yp, &ww, &wh, &bw, &d);
 
-	int lw = srcw, lh = srch, sx = xgrab - srcw / 2, sy = ygrab - srch / 2, dx = 0, dy = 0;
-	if (xgrab < srcw / 2)
+	sx = xgrab - srcw / 2;
+	sy = ygrab - srch / 2;
+	sw = srcw;
+	sh = srch;
+	dx = 0;
+	dy = 0;
+
+	if (sx < 0)
 	{
-		lw = xgrab + srcw / 2;
+		dx = -sx;
+		sw += sx;
+		if (sw >= ww) sw = ww;
 		sx = 0;
-		dx = srcw - lw;
-		if (xgrab + srcw / 2 >= ww)
-		{
-			lw = ww;
-		}
 	}
-	else if (xgrab + srcw / 2 >= ww)
+	else if (sx + srcw >= ww) sw = ww - sx;
+
+	if (sy < 0)
 	{
-		lw = ww - xgrab + srcw / 2;
-	}
-	if (ygrab < srch / 2)
-	{
-		lh = ygrab + srch / 2;
+		dy = -sy;
+		sh += sy;
+		if (sh >= wh) sh = wh;
 		sy = 0;
-		dy = srch - lh;
-		if (ygrab + srch / 2 >= wh)
-		{
-			lh = wh;
-		}
 	}
-	else if (ygrab + srch / 2 >= wh)
-	{
-		lh = wh - ygrab + srch / 2;
-	}
+	else if (sy + srch >= wh) sh = wh - sy;
 
 	if (attr1.class == 1)
 	{
-		im = XGetImage (dsp, winfocus, sx, sy, lw, lh, AllPlanes, ZPixmap);
-		XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, lw, lh);
+		im = XGetImage (dsp, winfocus, sx, sy, sw, sh, AllPlanes, ZPixmap);
+		XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
 	}
 
 	XRenderComposite (dsp, PictOpOver,
