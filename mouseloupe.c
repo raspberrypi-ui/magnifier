@@ -187,10 +187,53 @@ void draw_indicator(){
 // This function gets the image from winfocus and copies it to a pixmap then to topwin.
 void get_image(){
 
+	XImage *im;
+	Window root, child;
+	int xr, yr, xgrab, ygrab, xp, yp;
+	unsigned int wh, ww, mask, bw, d;
+
 	XSetForeground(dsp, gc, 0);
 	XFillRectangle(dsp, srcpixmap, gc, 0, 0, srcw, srch);
-	XCopyArea(dsp, winfocus, srcpixmap, gc, (posx - srcw / 2) - attr1.x, (posy - srch / 2) - attr1.y, srcw, srch, 0, 0);
 		
+	XQueryPointer (dsp, winfocus, &root, &child, &xr, &yr, &xgrab, &ygrab, &mask);
+	XGetGeometry (dsp, winfocus, &root, &xp, &yp, &ww, &wh, &bw, &d);
+
+	int lw = srcw, lh = srch, sx = xgrab - srcw / 2, sy = ygrab - srch / 2, dx = 0, dy = 0;
+	if (xgrab < srcw / 2)
+	{
+		lw = xgrab + srcw / 2;
+		sx = 0;
+		dx = srcw - lw;
+		if (xgrab + srcw / 2 >= ww)
+		{
+			lw = ww;
+		}
+	}
+	else if (xgrab + srcw / 2 >= ww)
+	{
+		lw = ww - xgrab + srcw / 2;
+	}
+	if (ygrab < srch / 2)
+	{
+		lh = ygrab + srch / 2;
+		sy = 0;
+		dy = srch - lh;
+		if (ygrab + srch / 2 >= wh)
+		{
+			lh = wh;
+		}
+	}
+	else if (ygrab + srch / 2 >= wh)
+	{
+		lh = wh - ygrab + srch / 2;
+	}
+
+	if (attr1.class == 1)
+	{
+		im = XGetImage (dsp, winfocus, sx, sy, lw, lh, AllPlanes, ZPixmap);
+		XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, lw, lh);
+	}
+
 	XRenderComposite (dsp, PictOpOver,
 			src_picture, None, dst_picture,
 			0, 0, 0, 0, 0, 0, dstw, dsth);
