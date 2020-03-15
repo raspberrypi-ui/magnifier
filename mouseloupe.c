@@ -664,6 +664,9 @@ int count = 0;
 
 	while (!quit){
 		XNextEvent(dsp, &ev);
+		grab_cursor();
+		get_image();
+		move();
 		switch (ev.type){
 
 			case MapNotify:
@@ -720,14 +723,6 @@ int count = 0;
 							count++;
 						}
 				};
-			case SelectionNotify:
-			case MotionNotify:
-			case EnterNotify:
-			case LeaveNotify:
-				grab_cursor();
-				get_image();
-				move();
-				break;
 
 			case KeyRelease:
 				XLookupString(&ev.xkey, text, 10, &key, NULL);
