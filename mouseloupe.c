@@ -669,6 +669,10 @@ int count = 0;
 		move();
 		switch (ev.type){
 
+			case ConfigureNotify:
+				XRaiseWindow(dsp, topwin);
+				break;
+
 			case MapNotify:
 				SetWindowsEvents (ev.xmap.window, AllWinMask);
 				//XRaiseWindow(dsp, topwin);
