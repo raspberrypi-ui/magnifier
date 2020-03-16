@@ -188,51 +188,55 @@ void draw_indicator(){
 void get_image(){
 
 	XImage *im;
-	Window root, child;
-	int xr, yr, xgrab, ygrab, xp, yp;
-	unsigned int wh, ww, mask, bw, d;
-	int sx, sy, sw, sh, dx, dy;
+	XWindowAttributes xatr;
+	Window root, nullwd, *children;
+	int mx, my, wx, wy, sx, sy, sw, sh, dx, dy, null1, null2, null3;
+	unsigned int wh, ww, nwins, wd;
 
 	XSetForeground(dsp, gc, 0);
 	XFillRectangle(dsp, srcpixmap, gc, 0, 0, srcw, srch);
 		
-	XQueryPointer (dsp, winfocus, &root, &child, &xr, &yr, &xgrab, &ygrab, &mask);
-	XGetGeometry (dsp, winfocus, &root, &xp, &yp, &ww, &wh, &bw, &d);
-
-	sx = xgrab - srcw / 2;
-	sy = ygrab - srch / 2;
-	sw = srcw;
-	sh = srch;
-	dx = 0;
-	dy = 0;
-
-	if (sx < 0)
+	XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins);
+	for (wd = 0; wd < nwins - 1; wd++)
 	{
-		dx = -sx;
-		sw += sx;
-		if (sw >= ww) sw = ww;
-		sx = 0;
-	}
-	else if (sx + srcw >= ww) sw = ww - sx;
+		XGetWindowAttributes (dsp, children[wd], &xatr);
+		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
-	if (sy < 0)
-	{
-		dy = -sy;
-		sh += sy;
-		if (sh >= wh) sh = wh;
-		sy = 0;
-	}
-	else if (sy + srch >= wh) sh = wh - sy;
+		XQueryPointer (dsp, children[wd], &root, &nullwd, &null1, &null2, &mx, &my, (unsigned *) &null3);
+		XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null1, (unsigned *) &null2);
 
-	if (attr1.class == 1)
-	{
-		im = XGetImage (dsp, winfocus, sx, sy, sw, sh, AllPlanes, ZPixmap);
+		sx = mx - srcw / 2;
+		sy = my - srch / 2;
+		sw = srcw;
+		sh = srch;
+		dx = 0;
+		dy = 0;
+
+		if (sx < 0)
+		{
+			dx = -sx;
+			sw += sx;
+			if (sw >= ww) sw = ww;
+			sx = 0;
+		}
+		else if (sx + srcw >= ww) sw = ww - sx;
+		if (sw <= 0) continue;
+
+		if (sy < 0)
+		{
+			dy = -sy;
+			sh += sy;
+			if (sh >= wh) sh = wh;
+			sy = 0;
+		}
+		else if (sy + srch >= wh) sh = wh - sy;
+		if (sh <= 0) continue;
+
+		im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
 		XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
-	}
 
-	XRenderComposite (dsp, PictOpOver,
-			src_picture, None, dst_picture,
-			0, 0, 0, 0, 0, 0, dstw, dsth);
+		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
+	}
 	draw_indicator();
 	
 	XCopyArea(dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
