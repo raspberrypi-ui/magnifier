@@ -99,11 +99,6 @@ int shape = 0;
 Bool useFilter = False;
 Bool mvEnable = False;
 
-Window xxroot_return, xxchild_return, winfocus;
-unsigned int xxmask_return;
-
-XWindowAttributes attr1;
-
 double magstep = 0;		/* magnify factor */
 
 int srcw = 0;			/* source width  (dstw / magstep) */
@@ -364,8 +359,6 @@ XSetWindowAttributes xset_attr;
 	scr = DefaultScreen(dsp);
 	rootwin = RootWindow (dsp, scr);
 
-	SetWindowsEvents(DefaultRootWindow(dsp), AllWinMask);
-	
 	topwin = XCreateSimpleWindow(dsp, rootwin, posx, posy, dstw, dsth,
 		bw, BlackPixel(dsp, scr), WhitePixel(dsp, scr));
 
@@ -649,7 +642,6 @@ KeySym key;
 Bool 	alt, ctrl,
 	other, quit;
 int count = 0;
-
 	ctrl = alt = other = quit = False;
 	args(argc, argv);
 	
@@ -667,13 +659,7 @@ int count = 0;
 		switch (ev.type){
 
 			case ConfigureNotify:
-				XRaiseWindow(dsp, topwin);
-				break;
-
-			case MapNotify:
-				SetWindowsEvents (ev.xmap.window, AllWinMask);
-				//XRaiseWindow(dsp, topwin);
-				//XSync (dsp, True);
+				XRaiseWindow (dsp, topwin);
 				break;
 
 			case KeyPress:
