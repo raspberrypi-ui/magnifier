@@ -197,15 +197,15 @@ void get_image(){
 	XFillRectangle(dsp, srcpixmap, gc, 0, 0, srcw, srch);
 		
 	XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins);
+	XQueryPointer (dsp, rootwin, &root, &nullwd, &null1, &null2, &mx, &my, (unsigned *) &null3);
 	for (wd = 0; wd < nwins - 1; wd++)
 	{
 		if (!XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null1, (unsigned *) &null2)) continue;
 		if (!XGetWindowAttributes (dsp, children[wd], &xatr)) continue;
 		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
-		XQueryPointer (dsp, children[wd], &root, &nullwd, &null1, &null2, &mx, &my, (unsigned *) &null3);
 
-		sx = mx - srcw / 2;
-		sy = my - srch / 2;
+		sx = mx - wx - srcw / 2;
+		sy = my - wy - srch / 2;
 		sw = srcw;
 		sh = srch;
 		dx = 0;
