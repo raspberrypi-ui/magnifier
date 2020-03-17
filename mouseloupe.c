@@ -203,7 +203,7 @@ void get_image(){
 		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
 		XQueryPointer (dsp, children[wd], &root, &nullwd, &null1, &null2, &mx, &my, (unsigned *) &null3);
-		XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null1, (unsigned *) &null2);
+		if (!XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null1, (unsigned *) &null2)) continue;
 
 		sx = mx - srcw / 2;
 		sy = my - srch / 2;
