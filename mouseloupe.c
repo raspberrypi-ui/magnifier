@@ -136,29 +136,6 @@ int stat, i;
 }
 
 /****************************************************************************************
-*					move
-****************************************************************************************/
-// Move the window (topwin) to the current cursor position
-void move(){
-	XMoveWindow(dsp, topwin, posx-(dstw/2)-5, posy-(dsth/2)-5);
-}
-
-/****************************************************************************************
-*					grab_cursor
-****************************************************************************************/
-// Get the cursor coordinates and the current window's ID
-void grab_cursor(){
-
-	XQueryPointer(dsp, rootwin, &xxroot_return, &xxchild_return,
-		&posx, &posy, &wposx, &wposy, &xxmask_return);
-
-	if (xxchild_return != topwin){
-		winfocus = xxchild_return;
-		XGetWindowAttributes(dsp, winfocus, &attr1);
-	}
-}
-
-/****************************************************************************************
 *					draw_indicator
 ****************************************************************************************/
 
@@ -184,28 +161,44 @@ void draw_indicator(){
 /****************************************************************************************
 *					get_image
 ****************************************************************************************/
-// This function gets the image from winfocus and copies it to a pixmap then to topwin.
-void get_image(){
 
+void get_image()
+{
 	XImage *im;
 	XWindowAttributes xatr;
 	Window root, nullwd, *children;
-	int mx, my, wx, wy, sx, sy, sw, sh, dx, dy, null1, null2, null3;
-	unsigned int wh, ww, nwins, wd;
+	int wx, wy, sx, sy, sw, sh, dx, dy, lx, ly, null1, null2;
+	unsigned int wh, ww, lw, lh, nwins, wd;
 
-	XSetForeground(dsp, gc, 0);
-	XFillRectangle(dsp, srcpixmap, gc, 0, 0, srcw, srch);
-		
-	XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins);
-	XQueryPointer (dsp, rootwin, &root, &nullwd, &null1, &null2, &mx, &my, (unsigned *) &null3);
+	// get the location of the mouse pointer
+	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &wposx, &wposy, (unsigned *) &null1);
+
+	// clear the loupe
+	XSetForeground (dsp, gc, 0);
+	XFillRectangle (dsp, srcpixmap, gc, 0, 0, srcw, srch);
+
+	// read the tree of windows
+	if (!XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins)) return;
+
+	// get the geometry of the loupe
+	if (!XGetGeometry (dsp, topwin, &root, &lx, &ly, &lw, &lh, (unsigned *) &null1, (unsigned *) &null2)) return;
+
+	// loop through all windows from the bottom up, ignoring the top window (which should be the loupe)
 	for (wd = 0; wd < nwins - 1; wd++)
 	{
+		// get the geometry of the window - ignore this window if it is unreadable
 		if (!XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null1, (unsigned *) &null2)) continue;
+
+		// if the geometry of the window matches that of the loupe, ignore it - it's probably the loupe with another window temporarily above it
+		if (lx == wx && ly == wy && lw == ww && lh == wh) continue;
+
+		// ignore any windows which have no output, or which are not viewable
 		if (!XGetWindowAttributes (dsp, children[wd], &xatr)) continue;
 		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
-		sx = mx - wx - srcw / 2;
-		sy = my - wy - srch / 2;
+		// calculate source region in this window and destination for it in the loupe
+		sx = posx - wx - srcw / 2;
+		sy = posy - wy - srch / 2;
 		sw = srcw;
 		sh = srch;
 		dx = 0;
@@ -231,14 +224,20 @@ void get_image(){
 		else if (sy + srch >= wh) sh = wh - sy;
 		if (sh <= 0) continue;
 
+		// copy the source image to the destination pixmap
 		im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
 		XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
 
+		// composite this window segment over other window segments
 		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
 	}
-	draw_indicator();
-	
-	XCopyArea(dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
+	draw_indicator ();
+
+	// update the loupe from the composite pixmap
+	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
+
+	// move the loupe so it is centred on the pointer location
+	XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
 }
 
 /****************************************************************************************
@@ -658,18 +657,13 @@ int count = 0;
 	
 	init_screen();
 	
-	grab_cursor();	
-	winfocus = xxchild_return;	
 	get_image();
-	move();
 
 	XMapRaised(dsp, topwin);
 
 	while (!quit){
 		XNextEvent(dsp, &ev);
-		grab_cursor();
 		get_image();
-		move();
 		switch (ev.type){
 
 			case ConfigureNotify:
