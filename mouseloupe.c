@@ -52,8 +52,6 @@
 #define RECTANGLE	-1
 
 #define WinMask		ExposureMask |\
-			KeyPressMask |\
-			KeyReleaseMask |\
 			PointerMotionMask |\
 			PointerMotionHintMask |\
 			ButtonMotionMask|\
@@ -107,17 +105,6 @@ int srcw = 0;			/* source width  (dstw / magstep) */
 int srch = 0;			/* source height (dsth / magstep) */
 int dstw = 0;			/* destination width (default = 350) */
 int dsth = 0;			/* destination height (default = 350) */
-
-static void atspi_event (const AtspiEvent *event, void *data)
-{
-	AtspiRect *rect;
-	GError *err;
-
-	if (!mvEnable) return;
-	if (event->source == NULL|| !event->detail1) return;
-	rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
-	XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x, rect->y);
-}
 
 /****************************************************************************************
 *				SetWindowsEvents
@@ -642,6 +629,18 @@ int ErrorHandler (Display *dpy, XErrorEvent *ev){
 	return (0);
 }
 
+static void atspi_event (const AtspiEvent *event, void *data)
+{
+	AtspiRect *rect;
+	GError *err;
+
+	if (!mvEnable) return;
+	if (event->source == NULL|| !event->detail1) return;
+	rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
+	if (rect->x == 0 || rect->y == 0) return;
+	XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x, rect->y);
+}
+
 void *atspi_main (void *param)
 {
 	atspi_event_main ();
@@ -656,8 +655,6 @@ void *atspi_main (void *param)
 int main (int argc, char **argv)
 {
 	XEvent ev;
-	Bool quit = False;
-
 	args (argc, argv);
 
 	XInitThreads ();
@@ -675,18 +672,13 @@ int main (int argc, char **argv)
 		pthread_create (&atspi_thread, NULL, atspi_main, NULL);
 	}
 
-	while (!quit){
-		XNextEvent(dsp, &ev);
-		get_image();
-		switch (ev.type){
-
-			case ConfigureNotify:
-				XRaiseWindow (dsp, topwin);
-				break;
-
-		};
+	while (1)
+	{
+		XNextEvent (dsp, &ev);
+		get_image ();
+		if (ev.type == ConfigureNotify) XRaiseWindow (dsp, topwin);
 	}
 
-	XCloseDisplay(dsp);
-	exit(0);
+	XCloseDisplay (dsp);
+	exit (0);
 }
