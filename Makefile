@@ -32,13 +32,13 @@
 ################################################################################
 
 
-LIBS=`pkg-config --libs xcomposite xfixes xdamage xrender`
-
+LIBS=`pkg-config --libs xcomposite xfixes xdamage xrender atk-bridge-2.0 atspi-2`
+INCLUDES= `pkg-config --cflags xcomposite xfixes xdamage xrender atk-bridge-2.0 atspi-2`
 CC = gcc -g -Wunused -Wall -O4 
 
-LDFLAGS =  -L/usr/X11R6/lib -lXext -lX11 -lm $(LIBS)
+LDFLAGS =  -L/usr/X11R6/lib -lXext -lX11 -lpthread -lm $(LIBS)
 
-CFLAGS = -o $@ -c -I/usr/X11R6/include -Dlinux -DFUNCPROTO=15 -DNARROWPROTO -fomit-frame-pointer
+CFLAGS = -o $@ -c $(INCLUDES) -I/usr/X11R6/include -Dlinux -DFUNCPROTO=15 -DNARROWPROTO -fomit-frame-pointer
 
 
 PROG =	./mouseloupe

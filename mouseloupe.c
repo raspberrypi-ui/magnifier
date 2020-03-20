@@ -39,10 +39,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <X11/extensions/shape.h>
 #include <X11/extensions/Xcomposite.h>
 #include <X11/extensions/Xdamage.h>
 #include <X11/extensions/Xrender.h>
+#include <atspi/atspi.h>
 
 #define MOUSELOUPE_VERSION "0.6"
 
@@ -106,6 +108,16 @@ int srch = 0;			/* source height (dsth / magstep) */
 int dstw = 0;			/* destination width (default = 350) */
 int dsth = 0;			/* destination height (default = 350) */
 
+static void atspi_event (const AtspiEvent *event, void *data)
+{
+	AtspiRect *rect;
+	GError *err;
+
+	if (!mvEnable) return;
+	if (event->source == NULL|| !event->detail1) return;
+	rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
+	XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x, rect->y);
+}
 
 /****************************************************************************************
 *				SetWindowsEvents
@@ -272,7 +284,7 @@ GC gc;
 /****************************************************************************************
 *					resize
 ****************************************************************************************/
-// Create the source pixmap and the destiny pixmap, which will be used to get and transform
+// Create the source pixmap and the destination pixmap, which will be used to get and transform
 // the windows contents
 void resize(){
 
@@ -630,28 +642,38 @@ int ErrorHandler (Display *dpy, XErrorEvent *ev){
 	return (0);
 }
 
+void *atspi_main (void *param)
+{
+	atspi_event_main ();
+	return NULL;
+}
+
 /****************************************************************************************
 *					main
 ****************************************************************************************/
 
 
-int main(int argc, char **argv){
-XEvent ev;
-char text[10];
-KeySym key;
-Bool 	alt, ctrl,
-	other, quit;
-int count = 0;
-	ctrl = alt = other = quit = False;
-	args(argc, argv);
-	
-	XSetErrorHandler (ErrorHandler);
-	
-	init_screen();
-	
-	get_image();
+int main (int argc, char **argv)
+{
+	XEvent ev;
+	Bool quit = False;
 
-	XMapRaised(dsp, topwin);
+	args (argc, argv);
+
+	XInitThreads ();
+	XSetErrorHandler (ErrorHandler);
+	init_screen ();
+	get_image ();
+	XMapRaised (dsp, topwin);
+
+	if (mvEnable)
+	{
+		pthread_t atspi_thread;
+		atspi_init ();
+		AtspiEventListener *listener = atspi_event_listener_new ((AtspiEventListenerCB) atspi_event, NULL, NULL);
+		atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
+		pthread_create (&atspi_thread, NULL, atspi_main, NULL);
+	}
 
 	while (!quit){
 		XNextEvent(dsp, &ev);
@@ -662,71 +684,6 @@ int count = 0;
 				XRaiseWindow (dsp, topwin);
 				break;
 
-			case KeyPress:
-				XLookupString(&ev.xkey, text, 10, &key, NULL);
-				switch (key){
-
-					case XK_KP_Enter:
-					case XK_Return:
-						other = True;
-						if (mvEnable){
-							posy += 15;
-							wposy += 15;
-							XWarpPointer(dsp, None, rootwin, None, None, None, None, posx, posy);
-						}
-						break;
-
-					case XK_BackSpace:
-						other = True;
-						if (mvEnable){
-							posx -= 10;
-							XWarpPointer(dsp, None, rootwin, None, None, None, None, posx, posy);
-						}
-						break;
-
-					case XK_Alt_L:
-						alt = True;
-						break;
-
-					case XK_Control_L:
-						ctrl = True;
-						break;
-
-					case XK_End:
-					case XK_q:
-						if ((ctrl && alt) && !other){
-							quit = True;
-							break;
-						}
-
-					default:
-						other = True;
-						if (mvEnable){
-							if (count % 3 == 0){
-								posx += 30;
-								wposx += 30;
-								XWarpPointer(dsp, None, rootwin, None, None, None, None, posx, posy);
-							}
-							count++;
-						}
-				};
-
-			case KeyRelease:
-				XLookupString(&ev.xkey, text, 10, &key, NULL);
-				switch (key){
-					case XK_Control_L:
-						ctrl = False;
-						break;
-
-					case XK_Alt_L:
-						alt = False;
-						break;
-
-					default:
-						other = False;
-
-				};
-				break;
 		};
 	}
 
