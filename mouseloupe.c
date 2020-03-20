@@ -635,10 +635,14 @@ static void atspi_event (const AtspiEvent *event, void *data)
 	GError *err;
 
 	if (!mvEnable) return;
-	if (event->source == NULL|| !event->detail1) return;
-	rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
-	if (rect->x == 0 || rect->y == 0) return;
-	XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x, rect->y);
+	if (event->source == NULL) return;
+	if (!strcmp (event->type, "object:text-caret-moved"))
+		rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
+	else if (!strcmp (event->type, "object:state-changed:focused"))
+		rect = atspi_component_get_extents ((AtspiComponent *) event->source, ATSPI_COORD_TYPE_SCREEN, &err);
+	else return;
+	if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
+	XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x + rect->width / 2, rect->y + rect->height / 2);
 }
 
 void *atspi_main (void *param)
@@ -669,6 +673,7 @@ int main (int argc, char **argv)
 		atspi_init ();
 		AtspiEventListener *listener = atspi_event_listener_new ((AtspiEventListenerCB) atspi_event, NULL, NULL);
 		atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
+		atspi_event_listener_register (listener, "object:state-changed:focused", NULL);
 		pthread_create (&atspi_thread, NULL, atspi_main, NULL);
 	}
 
