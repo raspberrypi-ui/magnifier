@@ -220,8 +220,11 @@ void get_image()
 
 		// copy the source image to the destination pixmap
 		im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
-		XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
-		XDestroyImage (im);
+		if (im != NULL)
+		{
+			XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
+			XDestroyImage (im);
+		}
 
 		// composite this window segment over other window segments
 		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
@@ -637,9 +640,9 @@ static void atspi_event (const AtspiEvent *event, void *data)
 
 	if (!mvEnable) return;
 	if (event->source == NULL) return;
-	if (!strcmp (event->type, "object:text-caret-moved"))
+	if (!g_strcmp0 (event->type, "object:text-caret-moved"))
 		rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
-	else if (!strcmp (event->type, "object:state-changed:focused"))
+	else if (!g_strcmp0 (event->type, "object:state-changed:focused"))
 		rect = atspi_component_get_extents ((AtspiComponent *) event->source, ATSPI_COORD_TYPE_SCREEN, &err);
 	else return;
 	if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
