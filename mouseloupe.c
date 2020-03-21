@@ -221,6 +221,7 @@ void get_image()
 		// copy the source image to the destination pixmap
 		im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
 		XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
+		XDestroyImage (im);
 
 		// composite this window segment over other window segments
 		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
