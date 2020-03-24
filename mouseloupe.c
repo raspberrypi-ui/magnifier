@@ -51,8 +51,6 @@
 
 #define SHM
 
-#define MOUSELOUPE_VERSION "0.6"
-
 #define CIRCLE		1
 #define RECTANGLE	-1
 
@@ -62,7 +60,6 @@ char *str_display = "";
 char *str_border = "green";	/* border color */
 char *str_hudfg = "green";	/* HUD indicator foreground color */
 char *str_hudbg = NULL;		/* HUD indicator background color */
-
 
 int bw = 5;			/* border width */
 
@@ -96,29 +93,6 @@ int srcw = 0;			/* source width  (dstw / magstep) */
 int srch = 0;			/* source height (dsth / magstep) */
 int dstw = 0;			/* destination width (default = 350) */
 int dsth = 0;			/* destination height (default = 350) */
-
-/****************************************************************************************
-*				SetWindowsEvents
-****************************************************************************************/
-// Recusively, this function will select the wanted events for all windows
-void SetWindowsEvents(Window root, unsigned long mask){
-Window parent, *children;
-unsigned int n;
-int stat, i;
-
-	stat = XQueryTree(dsp, root, &root, &parent, &children, &n);
-	if (!stat || !n)
-		return;
-	
-	XSelectInput(dsp, root, mask);
-	
-	for(i = 0; i < n; i++){
-		XSelectInput(dsp, children[i], mask);
-		SetWindowsEvents(children[i], mask);
-	}
-
-	XFree((char *)children);
-}
 
 /****************************************************************************************
 *					draw_indicator
@@ -234,7 +208,6 @@ void get_image()
 
 		// composite this window segment over other window segments
 		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
-
 	}
 	draw_indicator ();
 
@@ -448,6 +421,8 @@ Opens a screen magnifier under the mouse pointer.\n\n \
 \t-r [WIDTH] [HEIGHT],\tSet a rectamgular shape for the loupe\n \
 \t-z MAG,\t\t\tSet the magnify factor\n \
 \t-f,\t\t\tEnable a bilinear filter\n \
+\t-m,\t\t\tFollow focus point and text cursor\n \
+\t-s,\t\t\tStatic window - drag to move\n \
 \t--help,\t\t\tShow this message\n"};
 
 	for (i = 1; i < argc; i++){
