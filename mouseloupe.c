@@ -44,9 +44,14 @@
 #include <X11/extensions/Xcomposite.h>
 #include <X11/extensions/Xdamage.h>
 #include <X11/extensions/Xrender.h>
+#include <X11/extensions/XShm.h>
 #include <atspi/atspi.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #define MOUSELOUPE_VERSION "0.6"
+
+#define SHM
 
 #define CIRCLE		1
 #define RECTANGLE	-1
@@ -55,16 +60,6 @@
 			PointerMotionMask |\
 			PointerMotionHintMask |\
 			ButtonMotionMask|\
-			EnterWindowMask |\
-			LeaveWindowMask |\
-			StructureNotifyMask |\
-			SubstructureNotifyMask
-
-#define AllWinMask	KeyPressMask |\
-			KeyReleaseMask |\
-			PointerMotionMask |\
-			PointerMotionHintMask |\
-			ButtonMotionMask |\
 			StructureNotifyMask |\
 			SubstructureNotifyMask
 
@@ -164,6 +159,16 @@ void get_image()
 	int wx, wy, sx, sy, sw, sh, dx, dy, lx, ly, null1, null2;
 	unsigned int wh, ww, lw, lh, nwins, wd;
 
+#ifdef SHM
+	XShmSegmentInfo shi;
+
+	im = XShmCreateImage (dsp, DefaultVisual (dsp, scr), DefaultDepth (dsp, scr), ZPixmap, NULL, &shi, srcw, srch);
+	shi.shmid = shmget (IPC_PRIVATE, (unsigned int) (im->bytes_per_line * im->height), IPC_CREAT | 0777);
+	shi.shmaddr = im->data = (char *) shmat (shi.shmid, 0, 0);
+	shi.readOnly = False;
+	XShmAttach (dsp, &shi);
+#endif
+
 	// get the location of the mouse pointer
 	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &wposx, &wposy, (unsigned *) &null1);
 
@@ -219,20 +224,33 @@ void get_image()
 		if (sh <= 0) continue;
 
 		// copy the source image to the destination pixmap
+#ifdef SHM
+		XShmGetImage (dsp, children[wd], im, sx, sy, AllPlanes);
+		XShmPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh, False);
+#else
 		im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
 		if (im != NULL)
 		{
 			XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
 			XDestroyImage (im);
 		}
+#endif
 
 		// composite this window segment over other window segments
 		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
+
 	}
 	draw_indicator ();
 
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
+
+#ifdef SHM
+	XShmDetach (dsp, &shi);
+	XDestroyImage (im);
+	shmdt (shi.shmaddr);
+	shmctl (shi.shmid, IPC_RMID, 0);
+#endif
 
 	// move the loupe so it is centred on the pointer location
 	XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
