@@ -58,35 +58,31 @@
 
 Display *dsp;
 int scr;
-
 GC gc, hudgc;
 
 Window topwin, rootwin;
-Pixmap srcpixmap = None;
-Pixmap dstpixmap = None;
-
-Picture src_picture = None;
-Picture dst_picture = None;
+Pixmap srcpixmap, dstpixmap;
+Picture src_picture, dst_picture;
 XRenderPictureAttributes pict_attr;
 
 int posx, posy;
-int shape = 0;
+int shape = CIRCLE;
 Bool useFilter = False;
 Bool mvEnable = False;
 Bool statLoupe = False;
 
-double magstep = 0;		/* magnify factor */
+double magstep = 2;		/* magnify factor */
 
 int srcw = 0;			/* source width  (dstw / magstep) */
 int srch = 0;			/* source height (dsth / magstep) */
-int dstw = 0;			/* destination width (default = 350) */
-int dsth = 0;			/* destination height (default = 350) */
+int dstw = 350;			/* destination width (default = 350) */
+int dsth = 350;			/* destination height (default = 350) */
 
 /****************************************************************************************
 *					init_border
 ****************************************************************************************/
 
-void init_border()
+void init_border ()
 {
 	XColor col;
 
@@ -103,7 +99,7 @@ void init_border()
 *					get_image
 ****************************************************************************************/
 
-void get_image()
+void get_image ()
 {
 	XImage *im;
 	XWindowAttributes xatr;
@@ -206,92 +202,67 @@ void get_image()
 }
 
 /****************************************************************************************
-*					set_shape
-****************************************************************************************/
-// Depending on "shape", sets the loupe format to circular or rectangular
-void set_shape ()
-{
-	Pixmap bitmap = XCreatePixmap(dsp, rootwin, dstw, dsth, 1);
-	GC lgc = XCreateGC(dsp, bitmap, 0, NULL);
-	XSetForeground(dsp, lgc, 0);
-	XFillRectangle(dsp, bitmap, lgc, 0, 0, dstw, dsth);
-
-	XSetForeground(dsp, lgc, 1);
-	
-	if (shape == CIRCLE)
-		// The loupe will be circle shaped
-		XFillArc(dsp, bitmap, lgc, 0, 0, dstw, dsth, 0, 360 * 64);
-	else
-		// rectangular shape...
-		XFillRectangle(dsp, bitmap, lgc, 0, 0, dstw, dsth);
-		
-	// set a central hole on loupe window
-	XSetForeground(dsp, lgc, 0);
-	XFillRectangle(dsp, bitmap, lgc, dstw / 2, dsth / 2, 1, 1);
-
-	XShapeCombineMask(dsp, topwin, ShapeClip, 0, 0, bitmap, ShapeSet);
-	XShapeCombineMask(dsp, topwin, ShapeBounding, 0, 0, bitmap, ShapeSet);
-
-	XFreeGC(dsp, lgc);
-	XFreePixmap(dsp, bitmap);
-}
-
-/****************************************************************************************
-*					resize
-****************************************************************************************/
-// Create the source pixmap and the destination pixmap, which will be used to get and transform
-// the windows contents
-void resize ()
-{
-	srcpixmap = XCreatePixmap(dsp, rootwin, srcw, srch, DefaultDepth(dsp, scr));
-	dstpixmap = XCreatePixmap(dsp, rootwin, dstw, dsth, DefaultDepth(dsp, scr));
-	set_shape();
-}
-
-/****************************************************************************************
-*					SetRender
+*					setup_pixmaps
 ****************************************************************************************/
 
-void SetRender (void)
+void setup_pixmaps ()
 {
 	XTransform t;
-	int event_base, error_base;
 
-	// Check if the composite extension is present
-	if (!XCompositeQueryExtension (dsp, &event_base, &error_base)){
-		fprintf (stderr, "No composite extension.\n");
-		exit (EXIT_FAILURE);
-	}
+	// create the pixmaps and pictures used for scaling
+	srcpixmap = XCreatePixmap (dsp, rootwin, srcw, srch, DefaultDepth (dsp, scr));
+	dstpixmap = XCreatePixmap (dsp, rootwin, dstw, dsth, DefaultDepth (dsp, scr));
+	src_picture = XRenderCreatePicture (dsp, srcpixmap,	XRenderFindStandardFormat (dsp, PictStandardRGB24),	CPRepeat, &pict_attr);
+	dst_picture = XRenderCreatePicture (dsp, dstpixmap,	XRenderFindStandardFormat (dsp, PictStandardRGB24),	CPRepeat, &pict_attr);
 
-	// enable the composite extension
-	XCompositeRedirectSubwindows (dsp,rootwin, CompositeRedirectAutomatic);
-	// Set a scale matrix (zoom)
-	t.matrix[0][0] = XDoubleToFixed (1.0/magstep);
+	// create a scaling matrix (zoom)
+	t.matrix[0][0] = XDoubleToFixed (1.0 / magstep);
 	t.matrix[0][1] = 0.0;
 	t.matrix[0][2] = 0.0;
 
 	t.matrix[1][0] = 0.0;
-	t.matrix[1][1] = XDoubleToFixed (1.0/magstep);
+	t.matrix[1][1] = XDoubleToFixed (1.0 / magstep);
 	t.matrix[1][2] = 0.0;
     
 	t.matrix[2][0] = 0.0;
 	t.matrix[2][1] = 0.0;
 	t.matrix[2][2] = XDoubleToFixed (1.0);
 	
-	src_picture = XRenderCreatePicture (dsp, srcpixmap,
-			XRenderFindStandardFormat (dsp, PictStandardRGB24),
-			CPRepeat, &pict_attr);
-
-	dst_picture = XRenderCreatePicture (dsp, dstpixmap,
-			XRenderFindStandardFormat (dsp, PictStandardRGB24),
-			CPRepeat, &pict_attr);
-	
-	// Set the transformation matrix to the picture
+	// set the transformation matrix
 	XRenderSetPictureTransform (dsp, src_picture , &t);
 
-	if (useFilter == True)
-		// set a bilinear filter for the picture
-		XRenderSetPictureFilter (dsp, src_picture, FilterBilinear, 0, 0);
+	// set a bilinear filter if requested
+	if (useFilter == True) XRenderSetPictureFilter (dsp, src_picture, FilterBilinear, 0, 0);
+}
+
+void create_loupe (void)
+{
+	Pixmap bitmap;
+	GC lgc;
+
+	// create a pixmap for the output window
+	bitmap = XCreatePixmap (dsp, rootwin, dstw, dsth, 1);
+	lgc = XCreateGC (dsp, bitmap, 0, NULL);
+
+	// erase the whole area
+	XSetForeground (dsp, lgc, 0);
+	XFillRectangle (dsp, bitmap, lgc, 0, 0, dstw, dsth);
+
+	// draw the active area of the loupe
+	XSetForeground (dsp, lgc, 1);
+	if (shape == CIRCLE) XFillArc (dsp, bitmap, lgc, 0, 0, dstw, dsth, 0, 360 * 64);
+	else XFillRectangle (dsp, bitmap, lgc, 0, 0, dstw, dsth);
+
+	// clear an input area so mouse clicks pass through
+	XSetForeground (dsp, lgc, 0);
+	XFillRectangle (dsp, bitmap, lgc, dstw / 2, dsth / 2, 1, 1);
+
+	// use the resulting pixmap as a mask on the loupe window
+	XShapeCombineMask (dsp, topwin, ShapeClip, 0, 0, bitmap, ShapeSet);
+	XShapeCombineMask (dsp, topwin, ShapeBounding, 0, 0, bitmap, ShapeSet);
+
+	XFreeGC (dsp, lgc);
+	XFreePixmap (dsp, bitmap);
 }
 
 /****************************************************************************************
@@ -314,8 +285,9 @@ int intres;	// int result
 *					init_screen
 ****************************************************************************************/
 // Initialize all the basic elements of the program, such as: Display, Screen, Window...
-void init_screen(){
-XSetWindowAttributes xset_attr;
+void init_screen()
+{
+	XSetWindowAttributes xset_attr;
 
 	SetSize (&srcw, dstw);
 	SetSize (&srch, dsth);
@@ -325,7 +297,7 @@ XSetWindowAttributes xset_attr;
 		exit (EXIT_FAILURE);
 	}
 
-	scr = DefaultScreen(dsp);
+	scr = DefaultScreen (dsp);
 	rootwin = RootWindow (dsp, scr);
 
 	topwin = XCreateSimpleWindow(dsp, rootwin, posx, posy, dstw, dsth,
@@ -336,32 +308,13 @@ XSetWindowAttributes xset_attr;
 
 	XSelectInput(dsp, topwin, WinMask);
 
+	// enable the composite extension
+	XCompositeRedirectSubwindows (dsp, rootwin, CompositeRedirectAutomatic);
 	xset_attr.override_redirect = True;
 	XChangeWindowAttributes(dsp, topwin, CWOverrideRedirect, &xset_attr);
 
 	/* setup GC */
 	gc = XCreateGC(dsp, rootwin, 0, NULL);
-	
-	resize();
-
-	SetRender();
-	
-}
-
-/****************************************************************************************
-*					SetDefault
-****************************************************************************************/
-
-void SetDefault (void){
-
-	if (!shape)
-		shape = CIRCLE;
-	if (!magstep)
-		magstep = 2;
-	if (!dstw) {
-		dstw = 350;
-		dsth = 350;
-	}
 }
 
 /****************************************************************************************
@@ -597,7 +550,6 @@ Opens a screen magnifier under the mouse pointer.\n\n \
 			exit (EXIT_FAILURE);
 		}
 	}
-	SetDefault();
 }
 
 
@@ -646,6 +598,8 @@ int main (int argc, char **argv)
 	XInitThreads ();
 	XSetErrorHandler (ErrorHandler);
 	init_screen ();
+	setup_pixmaps ();
+	create_loupe ();
 	init_border ();
 	get_image ();
 	XMapRaised (dsp, topwin);
