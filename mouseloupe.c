@@ -159,16 +159,6 @@ void get_image()
 	int wx, wy, sx, sy, sw, sh, dx, dy, lx, ly, null1, null2;
 	unsigned int wh, ww, lw, lh, nwins, wd;
 
-#ifdef SHM
-	XShmSegmentInfo shi;
-
-	im = XShmCreateImage (dsp, DefaultVisual (dsp, scr), DefaultDepth (dsp, scr), ZPixmap, NULL, &shi, srcw, srch);
-	shi.shmid = shmget (IPC_PRIVATE, (unsigned int) (im->bytes_per_line * im->height), IPC_CREAT | 0777);
-	shi.shmaddr = im->data = (char *) shmat (shi.shmid, 0, 0);
-	shi.readOnly = False;
-	XShmAttach (dsp, &shi);
-#endif
-
 	// get the location of the mouse pointer
 	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &wposx, &wposy, (unsigned *) &null1);
 
@@ -225,8 +215,18 @@ void get_image()
 
 		// copy the source image to the destination pixmap
 #ifdef SHM
+		XShmSegmentInfo shi;
+		im = XShmCreateImage (dsp, DefaultVisual (dsp, scr), DefaultDepth (dsp, scr), ZPixmap, NULL, &shi, sw, sh);
+		shi.shmid = shmget (IPC_PRIVATE, (unsigned int) (im->bytes_per_line * im->height), IPC_CREAT | 0777);
+		shi.shmaddr = im->data = (char *) shmat (shi.shmid, 0, 0);
+		shi.readOnly = False;
+		XShmAttach (dsp, &shi);
 		XShmGetImage (dsp, children[wd], im, sx, sy, AllPlanes);
 		XShmPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh, False);
+		XShmDetach (dsp, &shi);
+		XDestroyImage (im);
+		shmdt (shi.shmaddr);
+		shmctl (shi.shmid, IPC_RMID, 0);
 #else
 		im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
 		if (im != NULL)
@@ -245,12 +245,6 @@ void get_image()
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
 
-#ifdef SHM
-	XShmDetach (dsp, &shi);
-	XDestroyImage (im);
-	shmdt (shi.shmaddr);
-	shmctl (shi.shmid, IPC_RMID, 0);
-#endif
 
 	// move the loupe so it is centred on the pointer location
 	XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
