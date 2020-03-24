@@ -65,35 +65,17 @@ Pixmap srcpixmap, dstpixmap;
 Picture src_picture, dst_picture;
 XRenderPictureAttributes pict_attr;
 
-int posx, posy;
-int shape = CIRCLE;
+int posx, posy;			/* mouse location */
+int srcw, srch;			/* source pixmap dimensions */
+
 Bool useFilter = False;
 Bool mvEnable = False;
 Bool statLoupe = False;
 
-double magstep = 2;		/* magnify factor */
-
-int srcw = 0;			/* source width  (dstw / magstep) */
-int srch = 0;			/* source height (dsth / magstep) */
+double magstep = 2;		/* magnification factor */
 int dstw = 350;			/* destination width (default = 350) */
 int dsth = 350;			/* destination height (default = 350) */
-
-/****************************************************************************************
-*					init_border
-****************************************************************************************/
-
-void init_border ()
-{
-	XColor col;
-
-	hudgc = XCreateGC (dsp, topwin, 0, NULL);
-	XParseColor (dsp, DefaultColormap (dsp, scr), "green", &col);
-	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
-	XSetForeground (dsp, hudgc, col.pixel);
-	XParseColor (dsp, DefaultColormap (dsp, scr), NULL, &col);
-	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
-	XSetBackground (dsp, hudgc, col.pixel);
-}
+int shape = CIRCLE;
 
 /****************************************************************************************
 *					get_image
@@ -205,9 +187,23 @@ void get_image ()
 *					setup_pixmaps
 ****************************************************************************************/
 
+int get_size (int dst)
+{
+	float floatres;
+	int intres;
+
+	floatres = dst / magstep;
+	intres = (int) floatres;
+	return (floatres / intres != 1) ? intres + 1 : intres;
+}
+
 void setup_pixmaps ()
 {
 	XTransform t;
+
+	// calculate source dimensions
+	srcw = get_size (dstw);
+	srch = get_size (dsth);
 
 	// create the pixmaps and pictures used for scaling
 	srcpixmap = XCreatePixmap (dsp, rootwin, srcw, srch, DefaultDepth (dsp, scr));
@@ -238,83 +234,68 @@ void setup_pixmaps ()
 void create_loupe (void)
 {
 	Pixmap bitmap;
-	GC lgc;
+	XColor col;
 
 	// create a pixmap for the output window
 	bitmap = XCreatePixmap (dsp, rootwin, dstw, dsth, 1);
-	lgc = XCreateGC (dsp, bitmap, 0, NULL);
+	hudgc = XCreateGC (dsp, bitmap, 0, NULL);
 
 	// erase the whole area
-	XSetForeground (dsp, lgc, 0);
-	XFillRectangle (dsp, bitmap, lgc, 0, 0, dstw, dsth);
+	XSetForeground (dsp, hudgc, 0);
+	XFillRectangle (dsp, bitmap, hudgc, 0, 0, dstw, dsth);
 
 	// draw the active area of the loupe
-	XSetForeground (dsp, lgc, 1);
-	if (shape == CIRCLE) XFillArc (dsp, bitmap, lgc, 0, 0, dstw, dsth, 0, 360 * 64);
-	else XFillRectangle (dsp, bitmap, lgc, 0, 0, dstw, dsth);
+	XSetForeground (dsp, hudgc, 1);
+	if (shape == CIRCLE) XFillArc (dsp, bitmap, hudgc, 0, 0, dstw, dsth, 0, 360 * 64);
+	else XFillRectangle (dsp, bitmap, hudgc, 0, 0, dstw, dsth);
 
 	// clear an input area so mouse clicks pass through
-	XSetForeground (dsp, lgc, 0);
-	XFillRectangle (dsp, bitmap, lgc, dstw / 2, dsth / 2, 1, 1);
+	XSetForeground (dsp, hudgc, 0);
+	XFillRectangle (dsp, bitmap, hudgc, dstw / 2, dsth / 2, 1, 1);
 
 	// use the resulting pixmap as a mask on the loupe window
 	XShapeCombineMask (dsp, topwin, ShapeClip, 0, 0, bitmap, ShapeSet);
 	XShapeCombineMask (dsp, topwin, ShapeBounding, 0, 0, bitmap, ShapeSet);
 
-	XFreeGC (dsp, lgc);
+	XFreeGC (dsp, hudgc);
 	XFreePixmap (dsp, bitmap);
+
+	// draw the border
+	hudgc = XCreateGC (dsp, topwin, 0, NULL);
+	XParseColor (dsp, DefaultColormap (dsp, scr), "green", &col);
+	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
+	XSetForeground (dsp, hudgc, col.pixel);
+
+	// draw the background
+	XParseColor (dsp, DefaultColormap (dsp, scr), NULL, &col);
+	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
+	XSetBackground (dsp, hudgc, col.pixel);
 }
-
-/****************************************************************************************
-*					SetSize
-****************************************************************************************/
-
-void SetSize (int *src, int dst){
-float floatres;	// float result
-int intres;	// int result
-
-	floatres = dst / magstep;
-	intres = (int) floatres;
-	if (floatres / intres != 1)
-		*src = 1;
-	*src += intres;
-}
-
 
 /****************************************************************************************
 *					init_screen
 ****************************************************************************************/
 // Initialize all the basic elements of the program, such as: Display, Screen, Window...
-void init_screen()
+void init_screen ()
 {
 	XSetWindowAttributes xset_attr;
-
-	SetSize (&srcw, dstw);
-	SetSize (&srch, dsth);
 	
-	if ((dsp = XOpenDisplay(NULL)) == NULL){
-		fprintf (stderr, "Cannot open display conection!\n");
-		exit (EXIT_FAILURE);
-	}
-
+	dsp = XOpenDisplay (NULL);
 	scr = DefaultScreen (dsp);
 	rootwin = RootWindow (dsp, scr);
+	gc = XCreateGC (dsp, rootwin, 0, NULL);
 
-	topwin = XCreateSimpleWindow(dsp, rootwin, posx, posy, dstw, dsth,
-		5, BlackPixel(dsp, scr), WhitePixel(dsp, scr));
+	// create the window which will be used for the loupe
+	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth,	5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
 
-	XSetWindowBorderPixmap(dsp, topwin, CopyFromParent);
-	XSetWindowBackgroundPixmap(dsp, topwin, None);
-
-	XSelectInput(dsp, topwin, WinMask);
+	XSetWindowBorderPixmap (dsp, topwin, CopyFromParent);
+	XSetWindowBackgroundPixmap (dsp, topwin, None);
+	XSelectInput (dsp, topwin, WinMask);
 
 	// enable the composite extension
 	XCompositeRedirectSubwindows (dsp, rootwin, CompositeRedirectAutomatic);
 	xset_attr.override_redirect = True;
-	XChangeWindowAttributes(dsp, topwin, CWOverrideRedirect, &xset_attr);
-
-	/* setup GC */
-	gc = XCreateGC(dsp, rootwin, 0, NULL);
+	XChangeWindowAttributes (dsp, topwin, CWOverrideRedirect, &xset_attr);
 }
 
 /****************************************************************************************
@@ -600,7 +581,6 @@ int main (int argc, char **argv)
 	init_screen ();
 	setup_pixmaps ();
 	create_loupe ();
-	init_border ();
 	get_image ();
 	XMapRaised (dsp, topwin);
 
