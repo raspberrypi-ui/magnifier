@@ -56,19 +56,10 @@
 
 #define WinMask	PointerMotionMask | PointerMotionHintMask | ButtonMotionMask | ButtonPressMask| ButtonReleaseMask
 
-char *str_display = "";
-char *str_border = "green";	/* border color */
-char *str_hudfg = "green";	/* HUD indicator foreground color */
-char *str_hudbg = NULL;		/* HUD indicator background color */
-
-int bw = 5;			/* border width */
-
 Display *dsp;
 int scr;
 
-static GC gc, hudgc;
-
-XColor col;
+GC gc, hudgc;
 
 Window topwin, rootwin;
 Pixmap srcpixmap = None;
@@ -76,12 +67,9 @@ Pixmap dstpixmap = None;
 
 Picture src_picture = None;
 Picture dst_picture = None;
-XRenderPictureAttributes	pict_attr;
-XTransform t;
+XRenderPictureAttributes pict_attr;
 
 int posx, posy;
-int wposx, wposy;
-int draw_done = 0;
 int shape = 0;
 Bool useFilter = False;
 Bool mvEnable = False;
@@ -95,26 +83,20 @@ int dstw = 0;			/* destination width (default = 350) */
 int dsth = 0;			/* destination height (default = 350) */
 
 /****************************************************************************************
-*					draw_indicator
+*					init_border
 ****************************************************************************************/
 
-void draw_indicator(){
-	if(!draw_done){
-		hudgc = XCreateGC(dsp, topwin, 0, NULL);
-		XParseColor(dsp, DefaultColormap(dsp, scr), str_hudfg, &col);
-		XAllocColor(dsp, DefaultColormap(dsp, scr), &col);
-		XSetForeground(dsp, hudgc, col.pixel);
-		XParseColor(dsp, DefaultColormap(dsp, scr), str_hudbg, &col);
-		XAllocColor(dsp, DefaultColormap(dsp, scr), &col);
-		XSetBackground(dsp, hudgc, col.pixel);
-		draw_done = True;
-	}
-	if (shape == CIRCLE)
-		// Set a circular border for the lupe
-		XDrawArc(dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2, 0, 360 * 64);
-	else
-		// Set a rectangular border for the lupe
-		XDrawRectangle (dsp, dstpixmap, hudgc, 1, 1, dstw-2, dsth-2);	
+void init_border()
+{
+	XColor col;
+
+	hudgc = XCreateGC (dsp, topwin, 0, NULL);
+	XParseColor (dsp, DefaultColormap (dsp, scr), "green", &col);
+	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
+	XSetForeground (dsp, hudgc, col.pixel);
+	XParseColor (dsp, DefaultColormap (dsp, scr), NULL, &col);
+	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
+	XSetBackground (dsp, hudgc, col.pixel);
 }
 
 /****************************************************************************************
@@ -126,11 +108,11 @@ void get_image()
 	XImage *im;
 	XWindowAttributes xatr;
 	Window root, nullwd, *children;
-	int wx, wy, sx, sy, sw, sh, dx, dy, lx, ly, null1, null2;
+	int wx, wy, sx, sy, sw, sh, dx, dy, lx, ly, null;
 	unsigned int wh, ww, lw, lh, nwins, wd;
 
 	// get the location of the mouse pointer
-	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &wposx, &wposy, (unsigned *) &null1);
+	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &null, &null, (unsigned *) &null);
 
 	// clear the loupe
 	XSetForeground (dsp, gc, 0);
@@ -140,13 +122,13 @@ void get_image()
 	if (!XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins)) return;
 
 	// get the geometry of the loupe
-	if (!XGetGeometry (dsp, topwin, &root, &lx, &ly, &lw, &lh, (unsigned *) &null1, (unsigned *) &null2)) return;
+	if (!XGetGeometry (dsp, topwin, &root, &lx, &ly, &lw, &lh, (unsigned *) &null, (unsigned *) &null)) return;
 
 	// loop through all windows from the bottom up, ignoring the top window (which should be the loupe)
 	for (wd = 0; wd < nwins - 1; wd++)
 	{
 		// get the geometry of the window - ignore this window if it is unreadable
-		if (!XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null1, (unsigned *) &null2)) continue;
+		if (!XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null, (unsigned *) &null)) continue;
 
 		// if the geometry of the window matches that of the loupe, ignore it - it's probably the loupe with another window temporarily above it
 		if (lx == wx && ly == wy && lw == ww && lh == wh) continue;
@@ -209,7 +191,12 @@ void get_image()
 		// composite this window segment over other window segments
 		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
 	}
-	draw_indicator ();
+
+	// draw the border
+	if (shape == CIRCLE)
+		XDrawArc (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2, 0, 360 * 64);
+	else
+		XDrawRectangle (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2);
 
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
@@ -222,34 +209,31 @@ void get_image()
 *					set_shape
 ****************************************************************************************/
 // Depending on "shape", sets the loupe format to circular or rectangular
-void set_shape(){
-Pixmap bitmap;
-GC gc;
+void set_shape ()
+{
+	Pixmap bitmap = XCreatePixmap(dsp, rootwin, dstw, dsth, 1);
+	GC lgc = XCreateGC(dsp, bitmap, 0, NULL);
+	XSetForeground(dsp, lgc, 0);
+	XFillRectangle(dsp, bitmap, lgc, 0, 0, dstw, dsth);
 
-	bitmap = XCreatePixmap(dsp, rootwin, dstw, dsth, 1);
-	gc = XCreateGC(dsp, bitmap, 0, NULL);
-	XSetForeground(dsp, gc, 0);
-	XFillRectangle(dsp, bitmap, gc, 0, 0, dstw, dsth);
-
-	XSetForeground(dsp, gc, 1);
+	XSetForeground(dsp, lgc, 1);
 	
 	if (shape == CIRCLE)
 		// The loupe will be circle shaped
-		XFillArc(dsp, bitmap, gc, 0, 0, dstw, dsth, 0, 360 * 64);
+		XFillArc(dsp, bitmap, lgc, 0, 0, dstw, dsth, 0, 360 * 64);
 	else
 		// rectangular shape...
-		XFillRectangle(dsp, bitmap, gc, 0, 0, dstw, dsth);
+		XFillRectangle(dsp, bitmap, lgc, 0, 0, dstw, dsth);
 		
 	// set a central hole on loupe window
-	XSetForeground(dsp, gc, 0); 
-	XFillRectangle(dsp, bitmap, gc, dstw / 2, dsth / 2, 1, 1);
+	XSetForeground(dsp, lgc, 0);
+	XFillRectangle(dsp, bitmap, lgc, dstw / 2, dsth / 2, 1, 1);
 
 	XShapeCombineMask(dsp, topwin, ShapeClip, 0, 0, bitmap, ShapeSet);
 	XShapeCombineMask(dsp, topwin, ShapeBounding, 0, 0, bitmap, ShapeSet);
 
-	XFreeGC(dsp, gc);
+	XFreeGC(dsp, lgc);
 	XFreePixmap(dsp, bitmap);
-
 }
 
 /****************************************************************************************
@@ -257,8 +241,8 @@ GC gc;
 ****************************************************************************************/
 // Create the source pixmap and the destination pixmap, which will be used to get and transform
 // the windows contents
-void resize(){
-
+void resize ()
+{
 	srcpixmap = XCreatePixmap(dsp, rootwin, srcw, srch, DefaultDepth(dsp, scr));
 	dstpixmap = XCreatePixmap(dsp, rootwin, dstw, dsth, DefaultDepth(dsp, scr));
 	set_shape();
@@ -268,8 +252,10 @@ void resize(){
 *					SetRender
 ****************************************************************************************/
 
-void SetRender (void){
-int event_base, error_base;
+void SetRender (void)
+{
+	XTransform t;
+	int event_base, error_base;
 
 	// Check if the composite extension is present
 	if (!XCompositeQueryExtension (dsp, &event_base, &error_base)){
@@ -334,7 +320,7 @@ XSetWindowAttributes xset_attr;
 	SetSize (&srcw, dstw);
 	SetSize (&srch, dsth);
 	
-	if ((dsp = XOpenDisplay(str_display)) == NULL){
+	if ((dsp = XOpenDisplay(NULL)) == NULL){
 		fprintf (stderr, "Cannot open display conection!\n");
 		exit (EXIT_FAILURE);
 	}
@@ -343,7 +329,7 @@ XSetWindowAttributes xset_attr;
 	rootwin = RootWindow (dsp, scr);
 
 	topwin = XCreateSimpleWindow(dsp, rootwin, posx, posy, dstw, dsth,
-		bw, BlackPixel(dsp, scr), WhitePixel(dsp, scr));
+		5, BlackPixel(dsp, scr), WhitePixel(dsp, scr));
 
 	XSetWindowBorderPixmap(dsp, topwin, CopyFromParent);
 	XSetWindowBackgroundPixmap(dsp, topwin, None);
@@ -660,6 +646,7 @@ int main (int argc, char **argv)
 	XInitThreads ();
 	XSetErrorHandler (ErrorHandler);
 	init_screen ();
+	init_border ();
 	get_image ();
 	XMapRaised (dsp, topwin);
 
