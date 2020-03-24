@@ -49,19 +49,14 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
-#define MOUSELOUPE_VERSION "0.6"
-
 #define SHM
+
+#define MOUSELOUPE_VERSION "0.6"
 
 #define CIRCLE		1
 #define RECTANGLE	-1
 
-#define WinMask		ExposureMask |\
-			PointerMotionMask |\
-			PointerMotionHintMask |\
-			ButtonMotionMask|\
-			StructureNotifyMask |\
-			SubstructureNotifyMask
+#define WinMask	PointerMotionMask | PointerMotionHintMask | ButtonMotionMask | ButtonPressMask| ButtonReleaseMask
 
 char *str_display = "";
 char *str_border = "green";	/* border color */
@@ -93,6 +88,7 @@ int draw_done = 0;
 int shape = 0;
 Bool useFilter = False;
 Bool mvEnable = False;
+Bool statLoupe = False;
 
 double magstep = 0;		/* magnify factor */
 
@@ -245,9 +241,8 @@ void get_image()
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
 
-
-	// move the loupe so it is centred on the pointer location
-	XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
+	// move the loupe to the top of the stack in case another window has opened
+	XRaiseWindow (dsp, topwin);
 }
 
 /****************************************************************************************
@@ -486,6 +481,15 @@ Opens a screen magnifier under the mouse pointer.\n\n \
 					}
 					break;
 
+				case 's':
+					if (statLoupe == False)
+						statLoupe = True;
+					else {
+						fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
+						exit (EXIT_FAILURE);
+					}
+					break;
+
 				case 'c':
 					if (shape == 0){
 						shape = CIRCLE;
@@ -675,6 +679,7 @@ void *atspi_main (void *param)
 int main (int argc, char **argv)
 {
 	XEvent ev;
+	int drag = 0;
 	args (argc, argv);
 
 	XInitThreads ();
@@ -695,9 +700,17 @@ int main (int argc, char **argv)
 
 	while (1)
 	{
-		XNextEvent (dsp, &ev);
 		get_image ();
-		if (ev.type == ConfigureNotify) XRaiseWindow (dsp, topwin);
+		if (statLoupe)
+		{
+			if (XCheckWindowEvent (dsp, topwin, WinMask, &ev))
+			{
+				if (ev.type == ButtonPress) drag = 1;
+				if (ev.type == ButtonRelease) drag = 0;
+				if (ev.type == MotionNotify && drag) XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
+			}
+		}
+		else XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
 	}
 
 	XCloseDisplay (dsp);
