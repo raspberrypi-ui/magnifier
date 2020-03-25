@@ -86,6 +86,9 @@ void get_image ()
 	// get the location of the mouse pointer
 	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &null, &null, (unsigned *) &null);
 
+	// move the loupe to the top of the stack in case another window has opened
+	XRaiseWindow (dsp, topwin);
+
 	// clear the loupe
 	XSetForeground (dsp, gc, 0);
 	XFillRectangle (dsp, srcpixmap, gc, 0, 0, srcw, srch);
@@ -101,9 +104,6 @@ void get_image ()
 	{
 		// get the geometry of the window - ignore this window if it is unreadable
 		if (!XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null, (unsigned *) &null)) continue;
-
-		// if the geometry of the window matches that of the loupe, ignore it - it's probably the loupe with another window temporarily above it
-		if (lx == wx && ly == wy && lw == ww && lh == wh) continue;
 
 		// ignore any windows which have no output, or which are not viewable
 		if (!XGetWindowAttributes (dsp, children[wd], &xatr)) continue;
@@ -175,8 +175,6 @@ void get_image ()
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
 
-	// move the loupe to the top of the stack in case another window has opened
-	XRaiseWindow (dsp, topwin);
 }
 
 /****************************************************************************************
