@@ -125,6 +125,7 @@ void get_image ()
 			sx = 0;
 		}
 		else if (sx + srcw >= ww) sw = ww - sx;
+		if (wx + sx + sw >= scrw) sw = scrw - sx - wx;
 		if (sw <= 0) continue;
 
 		if (sy < 0)
@@ -135,11 +136,8 @@ void get_image ()
 			sy = 0;
 		}
 		else if (sy + srch >= wh) sh = wh - sy;
-		if (sh <= 0) continue;
-
-		// constrain source size so it is completely on screen
-		if (wx + sx + sw >= scrw) sw = scrw - sx - wx;
 		if (wy + sy + sh >= scrh) sh = scrh - sy - wy;
+		if (sh <= 0) continue;
 
 		// copy the source image to the destination pixmap
 #ifdef SHM
