@@ -62,6 +62,7 @@ int srcw, srch;			/* source pixmap dimensions */
 
 Bool useFilter = False;
 Bool mvEnable = False;
+Bool fcEnable = False;
 Bool statLoupe = False;
 
 int magstep = 2;		/* magnification factor */
@@ -199,11 +200,11 @@ void setup_pixmaps ()
 	t.matrix[1][0] = 0.0;
 	t.matrix[1][1] = XDoubleToFixed (1.0 / magstep);
 	t.matrix[1][2] = 0.0;
-    
+
 	t.matrix[2][0] = 0.0;
 	t.matrix[2][1] = 0.0;
 	t.matrix[2][2] = XDoubleToFixed (1.0);
-	
+
 	// set the transformation matrix
 	XRenderSetPictureTransform (dsp, src_picture , &t);
 
@@ -297,210 +298,84 @@ int len;
 /****************************************************************************************
 *					args
 ****************************************************************************************/
-/*	-c [DIAMETER]		circle
-	-r [WIDTH] [HEIGHT]	rectangle
-	-z MAGNIFICATION	zoom
-	-f			filter	
-*/
 
-void args (int argc, char **argv){
-int i;
-char help[] = {"Usage: loupe [OPTIONS]\n\
-Opens a screen magnifier under the mouse pointer.\n\n \
-\t-c [DIAMETER],\t\tSet a circular shape for the loupe\n \
-\t-r [WIDTH] [HEIGHT],\tSet a rectamgular shape for the loupe\n \
-\t-z MAG,\t\t\tSet the magnify factor\n \
-\t-f,\t\t\tEnable a bilinear filter\n \
-\t-m,\t\t\tFollow focus point and text cursor\n \
-\t-s,\t\t\tStatic window - drag to move\n \
-\t--help,\t\t\tShow this message\n"};
+int intarg (char *str, int low, int high)
+{
+	int val;
+	if (sscanf (str, "%d", &val) != 1) return -1;
+	if (val < low || val > high) return -1;
+	return val;
+}
 
-	for (i = 1; i < argc; i++){
-		if (argv[i][0] == '-'){
-			if (strlen(argv[i]) != 2){
-				if (strcmp ("--help", argv[i]) == 0){
-					puts (help);
+#define GETINT(l,h) if (argc < i + 2 || argv[i + 1][0] == '-') continue; i++; val = intarg (argv[i], l, h); if (val == -1) goto argerr;
+
+void args (int argc, char **argv)
+{
+	int i, val;
+
+	for (i = 1; i < argc; i++)
+	{
+		if (argv[i][0] == '-')
+		{
+			if (strlen(argv[i]) != 2)
+			{
+				if (strcmp ("--help", argv[i]) == 0)
+				{
+					puts (	"Usage: loupe [OPTIONS]\n"
+							"Opens a screen magnifier under the mouse pointer.\n\n"
+							"\t-c [DIAMETER]\t\tSet a circular shape for the loupe\n"
+							"\t-r [WIDTH] [HEIGHT]\tSet a rectamgular shape for the loupe\n"
+							"\t-z MAG\t\t\tSet the magnify factor\n"
+							"\t-f\t\t\tEnable a bilinear filter\n"
+							"\t-m\t\t\tFollow focus point\n"
+							"\t-t\t\t\tFollow text cursor\n"
+							"\t-s\t\t\tStatic window - drag to move\n"
+							"\t--help\t\t\tShow this message\n" );
 					exit (EXIT_SUCCESS);
 				}
-				else {
-					fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i][1]);
-					exit (EXIT_FAILURE);
-				}
+				else goto argerr;
 			}
-			switch (argv[i][1]){
-				case 'f':
-					if (useFilter == False)
-						useFilter = True;
-					else {
-						fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-						exit (EXIT_FAILURE);
-					}
-					break;
 
-				case 'm':
-					if (mvEnable == False)
-						mvEnable = True;
-					else {
-						fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-						exit (EXIT_FAILURE);
-					}
-					break;
+			switch (argv[i][1])
+			{
+				case 'f': 	useFilter = True;
+							break;
 
-				case 's':
-					if (statLoupe == False)
-						statLoupe = True;
-					else {
-						fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-						exit (EXIT_FAILURE);
-					}
-					break;
+				case 'm': 	fcEnable = True;
+							break;
 
-				case 'c':
-					if (shape == 0){
-						shape = CIRCLE;
-						if (i+2 <= argc){
-							if (argv[i+1][0] != '-'){
-								i++;
-								if (dstw == 0){
-									if (!(dstw = strtoi (argv[i]))){
-										fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i][1]);
-										exit (EXIT_FAILURE);
-									}
-									else {
-										if ((dstw < 100) || (dstw > 600)){
-											fprintf (stderr, "%s: invalid parameter -- %c\nDIAMETER must be between 100 and 600\n", argv[0], argv[i-1][1]);
-											exit (EXIT_FAILURE);
-										}
-									}
-									dsth = dstw;
-								}
-								else {
-									fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-									exit (EXIT_FAILURE);
-								}
-							}
-						}
-					}
-					else {
-						fprintf (stderr, "%s: shape already set -- %c\n", argv[0], argv[i][1]);
-						exit (EXIT_FAILURE);
-					}
-					break;
+				case 't': 	mvEnable = True;
+							break;
 
-				case 'r':
-					if (shape == 0){
-						shape = RECTANGLE;
-						if (i+2 <= argc){
-							if (argv[i+1][0] != '-'){
-								i++;
-								if (dstw == 0){
-									if (!(dstw = strtoi (argv[i]))){
-										fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i][1]);
-										exit (EXIT_FAILURE);
-									}
-									else {
-										if ((dstw < 100) || (dstw > 800)){
-											fprintf (stderr, "%s: invalid parameter -- %c\nWIDTH must be between 100 and 800 pixels\n", argv[0], argv[i-1][1]);
-											exit (EXIT_FAILURE);
-										}
-									}
-								}
-								else {
-									fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-									exit (EXIT_FAILURE);
-								}
-								if (i+2 <= argc){
-									if (argv[i+1][0] != '-'){
-										i++;
-										if (dsth == 0){
-											if (!(dsth = strtoi (argv[i]))){
-												fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i][1]);
-												exit (EXIT_FAILURE);
-											}
-											else {
-												if ((dsth < 50) || (dsth > 600)){
-													fprintf (stderr, "%s: invalid parameter -- %c\nHEIGHT must be between 50 and 600 pixels\n", argv[0], argv[i-2][1]);
-													exit (EXIT_FAILURE);
-												}
-											}
-										}
-										else {
-											fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-											exit (EXIT_FAILURE);
-										}
-									}
-									else {
-										if (dsth == 0)
-											dsth = dstw;
-										else {
-											fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-											exit (EXIT_FAILURE);
-										}
-									}
-								}
-								else {
-									if (dsth == 0)
-										dsth = dstw;
-									else {
-										fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-										exit (EXIT_FAILURE);
-									}
-								}
-							}
-						}
-					}
-					else {
-						fprintf (stderr, "%s: shape already set -- %c\n", argv[0], argv[i][1]);
-						exit (EXIT_FAILURE);
-					}
-					break;
-				case 'z':	
-					if (magstep == 0){
-						if (i+2 <= argc){
-							if (argv[i+1][0] != '-'){
-								i++;
-								if (magstep == 0){
-									if (!(magstep = strtoi (argv[i]))){
-										fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i-1][1]);
-										exit (EXIT_FAILURE);
-									}
-									else {
-										if ((magstep < 2) || (magstep > 16)){
-											fprintf (stderr, "%s: invalid parameter -- %c\nMAG must be between 2.0 and 16.0\n", argv[0], argv[i-1][1]);
-											exit (EXIT_FAILURE);
-										}
-									}
-								}
-								else {
-									fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-									exit (EXIT_FAILURE);
-								}
-							}
-							else {
-								fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-								exit (EXIT_FAILURE);
-							}
-						}
-						else {
-							fprintf (stderr, "%s: too few arguments -- %c\n",argv[0], argv[i][1]);
-							exit (EXIT_FAILURE);
-						}
-					}
-					else {
-						fprintf (stderr, "%s: duplicated parameter -- %c\n", argv[0], argv[i][1]);
-						exit (EXIT_FAILURE);
-					}
-					break;
-				default:
-					fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i][1]);
-					exit (EXIT_FAILURE);
+				case 's': 	statLoupe = True;
+							break;
+
+				case 'z':	GETINT (2, 16);
+							magstep = val;
+							break;
+
+				case 'c':	shape = CIRCLE;
+							GETINT (100, 600);
+							dstw = dsth = val;
+							break;
+
+				case 'r':	shape = RECTANGLE;
+							GETINT (100, 800);
+							dstw = dsth = val;
+							GETINT (50, 600);
+							dsth = val;
+							break;
+
+				default:	goto argerr;
 			}
 		}
-		else {
-			fprintf (stderr, "%s: invalid option -- %c.\n", argv[0], argv[i][1]);
-			exit (EXIT_FAILURE);
-		}
+		else goto argerr;
 	}
+	return;
+
+argerr:
+	fprintf (stderr, "%s: invalid option : %s\n", argv[0], argv[i]);
+	exit (EXIT_FAILURE);
 }
 
 
@@ -518,7 +393,7 @@ static void atspi_event (const AtspiEvent *event, void *data)
 	AtspiRect *rect;
 	GError *err;
 
-	if (!mvEnable) return;
+	if (!mvEnable && !fcEnable) return;
 	if (event->source == NULL) return;
 	if (!g_strcmp0 (event->type, "object:text-caret-moved"))
 		rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
@@ -554,13 +429,13 @@ int main (int argc, char **argv)
 	setup_pixmaps ();
 	setup_loupe ();
 
-	if (mvEnable)
+	if (mvEnable || fcEnable)
 	{
 		pthread_t atspi_thread;
 		atspi_init ();
 		AtspiEventListener *listener = atspi_event_listener_new ((AtspiEventListenerCB) atspi_event, NULL, NULL);
-		atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
-		atspi_event_listener_register (listener, "object:state-changed:focused", NULL);
+		if (mvEnable) atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
+		if (fcEnable) atspi_event_listener_register (listener, "object:state-changed:focused", NULL);
 		pthread_create (&atspi_thread, NULL, atspi_main, NULL);
 	}
 
