@@ -64,7 +64,7 @@ Bool useFilter = False;
 Bool mvEnable = False;
 Bool statLoupe = False;
 
-double magstep = 2;		/* magnification factor */
+int magstep = 2;		/* magnification factor */
 int dstw = 350;			/* destination width (default = 350) */
 int dsth = 350;			/* destination height (default = 350) */
 int shape = CIRCLE;
@@ -292,19 +292,6 @@ void init_screen ()
 }
 
 /****************************************************************************************
-*					strtof
-****************************************************************************************/
-
-double _strtof (char *str){
-int len;
-	len = strlen (str);
-	if (strspn (str, "0123456789.") == len)
-		return atof(str);
-	else
-		return (0);
-}
-
-/****************************************************************************************
 *					strtoi
 ****************************************************************************************/
 
@@ -483,7 +470,7 @@ Opens a screen magnifier under the mouse pointer.\n\n \
 							if (argv[i+1][0] != '-'){
 								i++;
 								if (magstep == 0){
-									if (!(magstep = _strtof (argv[i]))){
+									if (!(magstep = strtoi (argv[i]))){
 										fprintf (stderr, "%s: invalid option -- %c\n", argv[0], argv[i-1][1]);
 										exit (EXIT_FAILURE);
 									}
