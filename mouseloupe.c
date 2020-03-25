@@ -57,6 +57,7 @@ Pixmap srcpixmap, dstpixmap;
 Picture src_picture, dst_picture;
 XRenderPictureAttributes pict_attr;
 
+int scrw, scrh;			/* screen size */
 int posx, posy;			/* mouse location */
 int srcw, srch;			/* source pixmap dimensions */
 
@@ -135,6 +136,10 @@ void get_image ()
 		}
 		else if (sy + srch >= wh) sh = wh - sy;
 		if (sh <= 0) continue;
+
+		// constrain source size so it is completely on screen
+		if (wx + sx + sw >= scrw) sw = scrw - sx - wx;
+		if (wy + sy + sh >= scrh) sh = scrh - sy - wy;
 
 		// copy the source image to the destination pixmap
 #ifdef SHM
@@ -271,6 +276,8 @@ void init_screen ()
 	scr = DefaultScreen (dsp);
 	rootwin = RootWindow (dsp, scr);
 	gc = XCreateGC (dsp, rootwin, 0, NULL);
+	scrw = WidthOfScreen (DefaultScreenOfDisplay (dsp));
+	scrh = HeightOfScreen (DefaultScreenOfDisplay (dsp));
 
 	// create the window which will be used for the loupe
 	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth,	5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
@@ -280,19 +287,6 @@ void init_screen ()
 	XCompositeRedirectSubwindows (dsp, rootwin, CompositeRedirectAutomatic);
 	xset_attr.override_redirect = True;
 	XChangeWindowAttributes (dsp, topwin, CWOverrideRedirect, &xset_attr);
-}
-
-/****************************************************************************************
-*					strtoi
-****************************************************************************************/
-
-int strtoi (char *str){
-int len;
-	len = strlen (str);
-	if (strspn (str, "0123456789") == len)
-		return atoi(str);
-	else
-		return (0);
 }
 
 /****************************************************************************************
@@ -384,7 +378,8 @@ argerr:
 ****************************************************************************************/
 
 
-int ErrorHandler (Display *dpy, XErrorEvent *ev){
+int error_handler (Display *dpy, XErrorEvent *ev)
+{
 	return (0);
 }
 
@@ -423,7 +418,7 @@ int main (int argc, char **argv)
 	args (argc, argv);
 
 	XInitThreads ();
-	XSetErrorHandler (ErrorHandler);
+	XSetErrorHandler (error_handler);
 
 	init_screen ();
 	setup_pixmaps ();
