@@ -1,48 +1,40 @@
-/*******************************************************************************
-*									       *
-* mouseloupe.c -- MouseLoupe main program				       *
-*									       *
-* Copyright (C) 2001-2005 Luciano Silva					       *
-*									       *
-* This is free software; you can redistribute it and/or modify it under the    *
-* terms of the GNU General Public License as published by the Free Software    *
-* Foundation; either version 2 of the License, or (at your option) any later   *
-* version.See README for details.       		                       *
-*                                                                              *
-* This software is distributed in the hope that it will be useful, but WITHOUT *
-* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or        *
-* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License        *
-* for more details.							       *
-* 									       *
-* You should have received a copy of the GNU General Public License along with *
-* software; if not, write to the Free Software Foundation, Inc., 59 Temple     *
-* Place, Suite 330, Boston, MA  02111-1307 USA		                       *
-*									       *
-* MouseLoupe - Screen Magnifier 					       *
-* Jul, 2001								       *
-*									       *
-* Written by Dr. Prof. Luciano Silva			luciano@inf.ufpr.br    *
-*									       *
-* Modifications:							       *
-*									       *
-*    21 Dec 2004 - Fabio Leite Vieira			flv03@inf.ufpr.br      *
-*		 - Mauricley Ribas Azevedo 		mra03@inf.ufpr.br      *
-*		 - Thiago de Souza Ferreira 		tsf03@inf.ufpr.br      *
-*******************************************************************************/
+/*
+Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+All rights reserved.
 
+Based on MouseLoupe, copyright (c) 2001-2005 Luciano Silva
+	Fabio Leite Vieira, Mauricley Ribas Azevedo, Thiago de Souza Ferreira
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/keysym.h>
-#include <X11/Xos.h>
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <X11/Xlib.h>
 #include <X11/extensions/shape.h>
 #include <X11/extensions/Xcomposite.h>
-#include <X11/extensions/Xdamage.h>
 #include <X11/extensions/Xrender.h>
 #include <X11/extensions/XShm.h>
 #include <atspi/atspi.h>
@@ -54,7 +46,7 @@
 #define CIRCLE		1
 #define RECTANGLE	-1
 
-#define WinMask	PointerMotionMask | PointerMotionHintMask | ButtonMotionMask | ButtonPressMask| ButtonReleaseMask
+#define EVENT_MASK	PointerMotionMask | PointerMotionHintMask | ButtonMotionMask | ButtonPressMask| ButtonReleaseMask
 
 Display *dsp;
 int scr;
@@ -171,10 +163,8 @@ void get_image ()
 	}
 
 	// draw the border
-	if (shape == CIRCLE)
-		XDrawArc (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2, 0, 360 * 64);
-	else
-		XDrawRectangle (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2);
+	if (shape == CIRCLE) XDrawArc (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2, 0, 360 * 64);
+	else XDrawRectangle (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2);
 
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
@@ -231,10 +221,14 @@ void setup_pixmaps ()
 	if (useFilter == True) XRenderSetPictureFilter (dsp, src_picture, FilterBilinear, 0, 0);
 }
 
-void create_loupe (void)
+void setup_loupe (void)
 {
 	Pixmap bitmap;
 	XColor col;
+
+	// set the background and border
+	XSetWindowBorderPixmap (dsp, topwin, CopyFromParent);
+	XSetWindowBackgroundPixmap (dsp, topwin, None);
 
 	// create a pixmap for the output window
 	bitmap = XCreatePixmap (dsp, rootwin, dstw, dsth, 1);
@@ -270,6 +264,8 @@ void create_loupe (void)
 	XParseColor (dsp, DefaultColormap (dsp, scr), NULL, &col);
 	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
 	XSetBackground (dsp, hudgc, col.pixel);
+
+	XMapRaised (dsp, topwin);
 }
 
 /****************************************************************************************
@@ -279,7 +275,7 @@ void create_loupe (void)
 void init_screen ()
 {
 	XSetWindowAttributes xset_attr;
-	
+
 	dsp = XOpenDisplay (NULL);
 	scr = DefaultScreen (dsp);
 	rootwin = RootWindow (dsp, scr);
@@ -287,10 +283,7 @@ void init_screen ()
 
 	// create the window which will be used for the loupe
 	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth,	5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
-
-	XSetWindowBorderPixmap (dsp, topwin, CopyFromParent);
-	XSetWindowBackgroundPixmap (dsp, topwin, None);
-	XSelectInput (dsp, topwin, WinMask);
+	XSelectInput (dsp, topwin, EVENT_MASK);
 
 	// enable the composite extension
 	XCompositeRedirectSubwindows (dsp, rootwin, CompositeRedirectAutomatic);
@@ -574,15 +567,15 @@ int main (int argc, char **argv)
 {
 	XEvent ev;
 	int drag = 0;
+
 	args (argc, argv);
 
 	XInitThreads ();
 	XSetErrorHandler (ErrorHandler);
+
 	init_screen ();
 	setup_pixmaps ();
-	create_loupe ();
-	get_image ();
-	XMapRaised (dsp, topwin);
+	setup_loupe ();
 
 	if (mvEnable)
 	{
@@ -599,7 +592,7 @@ int main (int argc, char **argv)
 		get_image ();
 		if (statLoupe)
 		{
-			if (XCheckWindowEvent (dsp, topwin, WinMask, &ev))
+			if (XCheckWindowEvent (dsp, topwin, EVENT_MASK, &ev))
 			{
 				if (ev.type == ButtonPress) drag = 1;
 				if (ev.type == ButtonRelease) drag = 0;
