@@ -190,8 +190,8 @@ void setup_pixmaps ()
 	// create the pixmaps and pictures used for scaling
 	srcpixmap = XCreatePixmap (dsp, rootwin, srcw, srch, DefaultDepth (dsp, scr));
 	dstpixmap = XCreatePixmap (dsp, rootwin, dstw, dsth, DefaultDepth (dsp, scr));
-	src_picture = XRenderCreatePicture (dsp, srcpixmap,	XRenderFindStandardFormat (dsp, PictStandardRGB24),	CPRepeat, &pict_attr);
-	dst_picture = XRenderCreatePicture (dsp, dstpixmap,	XRenderFindStandardFormat (dsp, PictStandardRGB24),	CPRepeat, &pict_attr);
+	src_picture = XRenderCreatePicture (dsp, srcpixmap, XRenderFindStandardFormat (dsp, PictStandardRGB24), CPRepeat, &pict_attr);
+	dst_picture = XRenderCreatePicture (dsp, dstpixmap, XRenderFindStandardFormat (dsp, PictStandardRGB24), CPRepeat, &pict_attr);
 
 	// create a scaling matrix (zoom)
 	t.matrix[0][0] = XDoubleToFixed (1.0 / magstep);
@@ -207,7 +207,7 @@ void setup_pixmaps ()
 	t.matrix[2][2] = XDoubleToFixed (1.0);
 
 	// set the transformation matrix
-	XRenderSetPictureTransform (dsp, src_picture , &t);
+	XRenderSetPictureTransform (dsp, src_picture, &t);
 
 	// set a bilinear filter if requested
 	if (useFilter == True) XRenderSetPictureFilter (dsp, src_picture, FilterBilinear, 0, 0);
@@ -276,7 +276,7 @@ void init_screen ()
 	scrh = HeightOfScreen (DefaultScreenOfDisplay (dsp));
 
 	// create the window which will be used for the loupe
-	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth,	5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
+	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
 	XSelectInput (dsp, topwin, EVENT_MASK);
 
 	// enable the composite extension
@@ -384,11 +384,10 @@ static void atspi_event (const AtspiEvent *event, void *data)
 	AtspiRect *rect;
 	GError *err;
 
-	if (!mvEnable && !fcEnable) return;
 	if (event->source == NULL) return;
-	if (!g_strcmp0 (event->type, "object:text-caret-moved"))
+	if (mvEnable && !g_strcmp0 (event->type, "object:text-caret-moved"))
 		rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
-	else if (!g_strcmp0 (event->type, "object:state-changed:focused"))
+	else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused"))
 		rect = atspi_component_get_extents ((AtspiComponent *) event->source, ATSPI_COORD_TYPE_SCREEN, &err);
 	else return;
 	if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
