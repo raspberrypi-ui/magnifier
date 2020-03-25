@@ -61,32 +61,31 @@ int scrw, scrh;			/* screen size */
 int posx, posy;			/* mouse location */
 int srcw, srch;			/* source pixmap dimensions */
 
+int magstep = 2;		/* magnification factor */
+int dstw = 350;			/* destination width (default = 350) */
+int dsth = 350;			/* destination height (default = 350) */
+int shape = CIRCLE;		/* loupe shape */
+
 Bool useFilter = False;
 Bool mvEnable = False;
 Bool fcEnable = False;
 Bool statLoupe = False;
 
-int magstep = 2;		/* magnification factor */
-int dstw = 350;			/* destination width (default = 350) */
-int dsth = 350;			/* destination height (default = 350) */
-int shape = CIRCLE;
 
-/****************************************************************************************
-*					get_image
-****************************************************************************************/
+/* get_image - construct the image to go in the loupe by copying from each window in turn */
 
-void get_image ()
+void get_image (void)
 {
 	XImage *im;
 	XWindowAttributes xatr;
 	Window root, nullwd, *children;
-	int wx, wy, sx, sy, sw, sh, dx, dy, lx, ly, null;
-	unsigned int wh, ww, lw, lh, nwins, wd;
+	int wx, wy, sx, sy, sw, sh, dx, dy, null;
+	unsigned int wh, ww, nwins, wd;
 
 	// get the location of the mouse pointer
 	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &null, &null, (unsigned *) &null);
 
-	// move the loupe to the top of the stack in case another window has opened
+	// move the loupe to the top of the stack in case another window has opened on top of it
 	XRaiseWindow (dsp, topwin);
 
 	// clear the loupe
@@ -95,9 +94,6 @@ void get_image ()
 
 	// read the tree of windows
 	if (!XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins)) return;
-
-	// get the geometry of the loupe
-	if (!XGetGeometry (dsp, topwin, &root, &lx, &ly, &lw, &lh, (unsigned *) &null, (unsigned *) &null)) return;
 
 	// loop through all windows from the bottom up, ignoring the top window (which should be the loupe)
 	for (wd = 0; wd < nwins - 1; wd++)
@@ -172,14 +168,12 @@ void get_image ()
 
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
-
 }
 
-/****************************************************************************************
-*					setup_pixmaps
-****************************************************************************************/
 
-void setup_pixmaps ()
+/* setup_pixmaps - create the linked source and destination pixmaps used by the loupe */
+
+void setup_pixmaps (void)
 {
 	XTransform t;
 
@@ -212,6 +206,9 @@ void setup_pixmaps ()
 	// set a bilinear filter if requested
 	if (useFilter == True) XRenderSetPictureFilter (dsp, src_picture, FilterBilinear, 0, 0);
 }
+
+
+/* setup_loupe - configure the loupe window itself */
 
 void setup_loupe (void)
 {
@@ -260,15 +257,21 @@ void setup_loupe (void)
 	XMapRaised (dsp, topwin);
 }
 
-/****************************************************************************************
-*					init_screen
-****************************************************************************************/
-// Initialize all the basic elements of the program, such as: Display, Screen, Window...
-void init_screen ()
+
+/* init_screen - generic X initialisation */
+
+void init_screen (void)
 {
 	XSetWindowAttributes xset_attr;
+	int event_base,	error_base;
 
 	dsp = XOpenDisplay (NULL);
+	if (dsp == NULL)
+	{
+		fprintf (stderr, "Cannot open display conection\n");
+		exit (EXIT_FAILURE);
+	}
+
 	scr = DefaultScreen (dsp);
 	rootwin = RootWindow (dsp, scr);
 	gc = XCreateGC (dsp, rootwin, 0, NULL);
@@ -279,15 +282,20 @@ void init_screen ()
 	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
 	XSelectInput (dsp, topwin, EVENT_MASK);
 
+	if (!XCompositeQueryExtension (dsp, &event_base, &error_base))
+	{
+		fprintf (stderr, "No composite extension\n");
+		exit (EXIT_FAILURE);
+	}
+
 	// enable the composite extension
 	XCompositeRedirectSubwindows (dsp, rootwin, CompositeRedirectAutomatic);
 	xset_attr.override_redirect = True;
 	XChangeWindowAttributes (dsp, topwin, CWOverrideRedirect, &xset_attr);
 }
 
-/****************************************************************************************
-*					args
-****************************************************************************************/
+
+/* intarg - argument parsing helper function - reads integer from string and checks range */
 
 int intarg (char *str, int low, int high)
 {
@@ -296,6 +304,9 @@ int intarg (char *str, int low, int high)
 	if (val < low || val > high) return -1;
 	return val;
 }
+
+
+/* args - parse command-line arguments to program */
 
 #define GETINT(l,h) if (argc < i + 2 || argv[i + 1][0] == '-') continue; i++; val = intarg (argv[i], l, h); if (val == -1) goto argerr;
 
@@ -364,20 +375,12 @@ void args (int argc, char **argv)
 	return;
 
 argerr:
-	fprintf (stderr, "%s: invalid option : %s\n", argv[0], argv[i]);
+	fprintf (stderr, "Invalid option : %s\n", argv[i]);
 	exit (EXIT_FAILURE);
 }
 
 
-/****************************************************************************************
-*					ErrorHandler
-****************************************************************************************/
-
-
-int error_handler (Display *dpy, XErrorEvent *ev)
-{
-	return (0);
-}
+/* atspi_event - callback on assistive tech event for keyboard or focus move */
 
 static void atspi_event (const AtspiEvent *event, void *data)
 {
@@ -394,18 +397,19 @@ static void atspi_event (const AtspiEvent *event, void *data)
 	XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x + rect->width / 2, rect->y + rect->height / 2);
 }
 
+
+/* atspi_main - AT-SPI event processing thread */
+
 void *atspi_main (void *param)
 {
 	atspi_event_main ();
 	return NULL;
 }
 
-/****************************************************************************************
-*					main
-****************************************************************************************/
 
+/* main */
 
-int main (int argc, char **argv)
+int main (int argc, char *argv[])
 {
 	XEvent ev;
 	int drag = 0;
@@ -413,7 +417,6 @@ int main (int argc, char **argv)
 	args (argc, argv);
 
 	XInitThreads ();
-	XSetErrorHandler (error_handler);
 
 	init_screen ();
 	setup_pixmaps ();
@@ -445,5 +448,7 @@ int main (int argc, char **argv)
 	}
 
 	XCloseDisplay (dsp);
-	exit (0);
+	exit (EXIT_SUCCESS);
 }
+
+/* End of file */
