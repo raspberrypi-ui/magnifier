@@ -79,8 +79,8 @@ void get_image (void)
 	XImage *im;
 	XWindowAttributes xatr;
 	Window root, nullwd, *children;
-	int wx, wy, sx, sy, sw, sh, dx, dy, null;
-	unsigned int wh, ww, nwins, wd;
+	int sx, sy, sw, sh, dx, dy, null;
+	unsigned int nwins, wd;
 
 	// get the location of the mouse pointer
 	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &null, &null, (unsigned *) &null);
@@ -98,16 +98,13 @@ void get_image (void)
 	// loop through all windows from the bottom up, ignoring the top window (which should be the loupe)
 	for (wd = 0; wd < nwins - 1; wd++)
 	{
-		// get the geometry of the window - ignore this window if it is unreadable
-		if (!XGetGeometry (dsp, children[wd], &root, &wx, &wy, &ww, &wh, (unsigned *) &null, (unsigned *) &null)) continue;
-
 		// ignore any windows which have no output, or which are not viewable
 		if (!XGetWindowAttributes (dsp, children[wd], &xatr)) continue;
 		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
 		// calculate source region in this window and destination for it in the loupe
-		sx = posx - wx - srcw / 2;
-		sy = posy - wy - srch / 2;
+		sx = posx - xatr.x - srcw / 2;
+		sy = posy - xatr.y - srch / 2;
 		sw = srcw;
 		sh = srch;
 		dx = 0;
@@ -117,22 +114,22 @@ void get_image (void)
 		{
 			dx = -sx;
 			sw += sx;
-			if (sw >= ww) sw = ww;
+			if (sw >= xatr.width) sw = xatr.width;
 			sx = 0;
 		}
-		else if (sx + srcw >= ww) sw = ww - sx;
-		if (wx + sx + sw >= scrw) sw = scrw - sx - wx;
+		else if (sx + srcw >= xatr.width) sw = xatr.width - sx;
+		if (xatr.x + sx + sw >= scrw) sw = scrw - sx - xatr.x;
 		if (sw <= 0) continue;
 
 		if (sy < 0)
 		{
 			dy = -sy;
 			sh += sy;
-			if (sh >= wh) sh = wh;
+			if (sh >= xatr.height) sh = xatr.height;
 			sy = 0;
 		}
-		else if (sy + srch >= wh) sh = wh - sy;
-		if (wy + sy + sh >= scrh) sh = scrh - sy - wy;
+		else if (sy + srch >= xatr.height) sh = xatr.height - sy;
+		if (xatr.y + sy + sh >= scrh) sh = scrh - sy - xatr.y;
 		if (sh <= 0) continue;
 
 		// copy the source image to the destination pixmap
@@ -168,6 +165,8 @@ void get_image (void)
 
 	// update the loupe from the composite pixmap
 	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
+
+	XFree (children);
 }
 
 
