@@ -177,23 +177,13 @@ void get_image ()
 *					setup_pixmaps
 ****************************************************************************************/
 
-int get_size (int dst)
-{
-	float floatres;
-	int intres;
-
-	floatres = dst / magstep;
-	intres = (int) floatres;
-	return (floatres / intres != 1) ? intres + 1 : intres;
-}
-
 void setup_pixmaps ()
 {
 	XTransform t;
 
 	// calculate source dimensions
-	srcw = get_size (dstw);
-	srch = get_size (dsth);
+	srcw = dstw / magstep + ((dstw % magstep) ? 1 : 0);
+	srch = dsth / magstep + ((dsth % magstep) ? 1 : 0);
 
 	// create the pixmaps and pictures used for scaling
 	srcpixmap = XCreatePixmap (dsp, rootwin, srcw, srch, DefaultDepth (dsp, scr));
