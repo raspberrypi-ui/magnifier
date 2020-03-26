@@ -72,6 +72,15 @@ Bool fcEnable = False;
 Bool statLoupe = False;
 
 
+/* ignore_errors - dummy error handler to suppress error messages. Yuk! */
+/* Only needed because X has no way to check if a window ID is still valid... */
+
+int ignore_errors (Display *dpy, XErrorEvent *ev)
+{
+	return 0;
+}
+
+
 /* get_image - construct the image to go in the loupe by copying from each window in turn */
 
 void get_image (void)
@@ -416,6 +425,7 @@ int main (int argc, char *argv[])
 	args (argc, argv);
 
 	XInitThreads ();
+	XSetErrorHandler (ignore_errors);
 
 	init_screen ();
 	setup_pixmaps ();
