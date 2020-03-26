@@ -43,8 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SHM
 
-#define CIRCLE		1
-#define RECTANGLE	-1
+#define CIRCLE		0
+#define RECTANGLE	1
 
 #define EVENT_MASK	PointerMotionMask | PointerMotionHintMask | ButtonMotionMask | ButtonPressMask| ButtonReleaseMask
 
@@ -71,6 +71,7 @@ Bool useFilter = False;
 Bool mvEnable = False;
 Bool fcEnable = False;
 Bool statLoupe = False;
+
 Bool ignore_errors = False;
 
 
