@@ -253,7 +253,7 @@ void setup_loupe (void)
 
 	// draw the border
 	hudgc = XCreateGC (dsp, topwin, 0, NULL);
-	XParseColor (dsp, DefaultColormap (dsp, scr), "green", &col);
+	XParseColor (dsp, DefaultColormap (dsp, scr), "yellow", &col);
 	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
 	XSetForeground (dsp, hudgc, col.pixel);
 
