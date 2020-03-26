@@ -56,6 +56,7 @@ Window topwin, rootwin;
 Pixmap srcpixmap, dstpixmap;
 Picture src_picture, dst_picture;
 XRenderPictureAttributes pict_attr;
+XErrorHandler default_handler;
 
 int scrw, scrh;			/* screen size */
 int posx, posy;			/* mouse location */
@@ -70,13 +71,14 @@ Bool useFilter = False;
 Bool mvEnable = False;
 Bool fcEnable = False;
 Bool statLoupe = False;
+Bool ignore_errors = False;
 
 
-/* ignore_errors - dummy error handler to suppress error messages. Yuk! */
-/* Only needed because X has no way to check if a window ID is still valid... */
+/* error handler - allows errors to be masked; otherwise calls X default handler */
 
-int ignore_errors (Display *dpy, XErrorEvent *ev)
+int error_handler (Display *dpy, XErrorEvent *ev)
 {
+	if (!ignore_errors) default_handler (dpy, ev);
 	return 0;
 }
 
@@ -108,7 +110,9 @@ void get_image (void)
 	for (wd = 0; wd < nwins - 1; wd++)
 	{
 		// ignore any windows which have no output, or which are not viewable
+		ignore_errors = True;
 		if (!XGetWindowAttributes (dsp, children[wd], &xatr)) continue;
+		ignore_errors = False;
 		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
 		// calculate source region in this window and destination for it in the loupe
@@ -425,7 +429,7 @@ int main (int argc, char *argv[])
 	args (argc, argv);
 
 	XInitThreads ();
-	XSetErrorHandler (ignore_errors);
+	default_handler = XSetErrorHandler (error_handler);
 
 	init_screen ();
 	setup_pixmaps ();
