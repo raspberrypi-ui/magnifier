@@ -120,14 +120,21 @@ void get_image (void)
 		if (xatr.x + xatr.width < 0 || xatr.y + xatr.height < 0 || xatr.x >= scrw || xatr.y >= scrh) continue;
 
 		// calculate source region in this window and destination for it in the loupe
-		sx = posx - xatr.x - srcw / 2;
-		sy = posy - xatr.y - srch / 2;
+		sx = posx - srcw / 2 - xatr.x;
+		sy = posy - srch / 2 - xatr.y;
 		sw = srcw;
 		sh = srch;
 		dx = 0;
 		dy = 0;
 
-		if (sx < 0)
+		if (xatr.x < 0 && xatr.x + sx < 0)
+		{
+			dx = - (xatr.x + sx);
+			sw += (xatr.x + sx);
+			if (sw >= xatr.width + xatr.x) sw = xatr.width + xatr.x;
+			sx = -xatr.x;
+		}
+		else if (sx < 0)
 		{
 			dx = -sx;
 			sw += sx;
@@ -138,7 +145,14 @@ void get_image (void)
 		if (xatr.x + sx + sw >= scrw) sw = scrw - sx - xatr.x;
 		if (sw <= 0) continue;
 
-		if (sy < 0)
+		if (xatr.y < 0 && xatr.y + sy < 0)
+		{
+			dy = - (xatr.y + sy);
+			sh += (xatr.y + sy);
+			if (sh >= xatr.height + xatr.y) sh = xatr.height + xatr.y;
+			sy = -xatr.y;
+		}
+		else if (sy < 0)
 		{
 			dy = -sy;
 			sh += sy;
@@ -415,7 +429,7 @@ static void atspi_event (const AtspiEvent *event, void *data)
 	if (event->source == NULL) return;
 	if (mvEnable && !g_strcmp0 (event->type, "object:text-caret-moved"))
 		rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
-	else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused"))
+	else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused") && event->detail1)
 		rect = atspi_component_get_extents ((AtspiComponent *) event->source, ATSPI_COORD_TYPE_SCREEN, &err);
 	else return;
 	if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
