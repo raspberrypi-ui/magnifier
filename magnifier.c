@@ -62,10 +62,10 @@ int scrw, scrh;			/* screen size */
 int posx, posy;			/* mouse location */
 int srcw, srch;			/* source pixmap dimensions */
 
+int shape = RECTANGLE;	/* loupe shape */
+int dstw = 350;			/* loupe width */
+int dsth = 350;			/* loupe height */
 int magstep = 2;		/* magnification factor */
-int dstw = 350;			/* destination width (default = 350) */
-int dsth = 350;			/* destination height (default = 350) */
-int shape = CIRCLE;		/* loupe shape */
 
 Bool useFilter = False;
 Bool mvEnable = False;
