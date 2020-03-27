@@ -294,6 +294,10 @@ void init_screen (void)
 	scrw = WidthOfScreen (DefaultScreenOfDisplay (dsp));
 	scrh = HeightOfScreen (DefaultScreenOfDisplay (dsp));
 
+	// make sure a static loupe will be onscreen
+	if (posx >= scrw - dstw - 10) posx = scrw - dstw - 10;
+	if (posy >= scrh - dsth - 10) posy = scrh - dsth - 10;
+
 	// create the window which will be used for the loupe
 	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
 	XSelectInput (dsp, topwin, EVENT_MASK);
@@ -317,6 +321,7 @@ int intarg (char *str, int low, int high)
 {
 	int val;
 	if (sscanf (str, "%d", &val) != 1) return -1;
+	if (high == -1) return val;
 	if (val < low || val > high) return -1;
 	return val;
 }
@@ -365,9 +370,9 @@ void args (int argc, char **argv)
 							break;
 
 				case 's': 	statLoupe = True;
-							GETINT (0, 2000);
+							GETINT (0, -1);
 							posx = val;
-							GETINT (0, 2000);
+							GETINT (0, -1);
 							posy = val;
 							break;
 
