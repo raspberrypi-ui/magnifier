@@ -116,6 +116,9 @@ void get_image (void)
 		ignore_errors = False;
 		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
+		// some windows seem to be entirely offscreen...
+		if (xatr.x + xatr.width < 0 || xatr.y + xatr.height < 0 || xatr.x >= scrw || xatr.y >= scrh) continue;
+
 		// calculate source region in this window and destination for it in the loupe
 		sx = posx - xatr.x - srcw / 2;
 		sy = posy - xatr.y - srch / 2;
