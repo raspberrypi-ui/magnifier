@@ -362,6 +362,10 @@ void args (int argc, char **argv)
 							break;
 
 				case 's': 	statLoupe = True;
+							GETINT (0, 2000);
+							posx = val;
+							GETINT (0, 2000);
+							posy = val;
 							break;
 
 				case 'z':	GETINT (2, 16);
@@ -454,7 +458,11 @@ int main (int argc, char *argv[])
 			if (XCheckWindowEvent (dsp, topwin, EVENT_MASK, &ev))
 			{
 				if (ev.type == ButtonPress) drag = 1;
-				if (ev.type == ButtonRelease) drag = 0;
+				if (ev.type == ButtonRelease)
+				{
+					drag = 0;
+					system ("lxpanelctl command magnifier pos");
+				}
 				if (ev.type == MotionNotify && drag) XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
 			}
 		}
