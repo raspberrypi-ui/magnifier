@@ -58,7 +58,7 @@ Picture src_picture, dst_picture;
 XRenderPictureAttributes pict_attr;
 XErrorHandler default_handler;
 
-int scrw, scrh;			/* screen size */
+int screenw, screenh;	/* screen size */
 int posx, posy;			/* mouse location */
 int srcw, srch;			/* source pixmap dimensions */
 
@@ -116,52 +116,54 @@ void get_image (void)
 		ignore_errors = False;
 		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
-		// some windows seem to be entirely offscreen...
-		if (xatr.x + xatr.width < 0 || xatr.y + xatr.height < 0 || xatr.x >= scrw || xatr.y >= scrh) continue;
-
-		// calculate source region in this window and destination for it in the loupe
-		sx = posx - srcw / 2 - xatr.x;
-		sy = posy - srch / 2 - xatr.y;
-		sw = srcw;
-		sh = srch;
+		// start with destination point in loupe at origin
 		dx = 0;
 		dy = 0;
 
-		if (xatr.x < 0 && xatr.x + sx < 0)
+		// calculate loupe bounds in screen coords
+		sx = posx - srcw / 2;
+		sy = posy - srch / 2;
+		sw = sx + srcw;
+		sh = sy + srch;
+
+		// constrain loupe to screen, moving destination if needed
+		if (sx < 0)
 		{
-			dx = - (xatr.x + sx);
-			sw += (xatr.x + sx);
-			if (sw >= xatr.width + xatr.x) sw = xatr.width + xatr.x;
-			sx = -xatr.x;
-		}
-		else if (sx < 0)
-		{
-			dx = -sx;
-			sw += sx;
-			if (sw >= xatr.width) sw = xatr.width;
+			dx += -sx;
 			sx = 0;
 		}
-		else if (sx + srcw >= xatr.width) sw = xatr.width - sx;
-		if (xatr.x + sx + sw >= scrw) sw = scrw - sx - xatr.x;
-		if (sw <= 0) continue;
-
-		if (xatr.y < 0 && xatr.y + sy < 0)
+		if (sy < 0)
 		{
-			dy = - (xatr.y + sy);
-			sh += (xatr.y + sy);
-			if (sh >= xatr.height + xatr.y) sh = xatr.height + xatr.y;
-			sy = -xatr.y;
-		}
-		else if (sy < 0)
-		{
-			dy = -sy;
-			sh += sy;
-			if (sh >= xatr.height) sh = xatr.height;
+			dy += -sy;
 			sy = 0;
 		}
-		else if (sy + srch >= xatr.height) sh = xatr.height - sy;
-		if (xatr.y + sy + sh >= scrh) sh = scrh - sy - xatr.y;
-		if (sh <= 0) continue;
+		if (sw >= screenw) sw = screenw;
+		if (sh >= screenh) sh = screenh;
+
+		// convert source to coords relative to window
+		sx -= xatr.x;
+		sw -= xatr.x;
+		sy -= xatr.y;
+		sh -= xatr.y;
+
+		// constrain loupe to window, moving destination if needed
+		if (sx < 0)
+		{
+			dx += -sx;
+			sx = 0;
+		}
+		if (sy < 0)
+		{
+			dy += -sy;
+			sy = 0;
+		}
+		if (sw >= xatr.width) sw = xatr.width;
+		if (sh >= xatr.height) sh = xatr.height;
+
+		// convert loupe bounds to width and height
+		sw -= sx;
+		sh -= sy;
+		if (sw <= 0 || sh <= 0) continue;
 
 		// copy the source image to the destination pixmap
 #ifdef SHM
@@ -305,12 +307,12 @@ void init_screen (void)
 	scr = DefaultScreen (dsp);
 	rootwin = RootWindow (dsp, scr);
 	gc = XCreateGC (dsp, rootwin, 0, NULL);
-	scrw = WidthOfScreen (DefaultScreenOfDisplay (dsp));
-	scrh = HeightOfScreen (DefaultScreenOfDisplay (dsp));
+	screenw = WidthOfScreen (DefaultScreenOfDisplay (dsp));
+	screenh = HeightOfScreen (DefaultScreenOfDisplay (dsp));
 
 	// make sure a static loupe will be onscreen
-	if (posx >= scrw - dstw - 10) posx = scrw - dstw - 10;
-	if (posy >= scrh - dsth - 10) posy = scrh - dsth - 10;
+	if (posx >= screenw - dstw - 10) posx = screenw - dstw - 10;
+	if (posy >= screenh - dsth - 10) posy = screenh - dsth - 10;
 
 	// create the window which will be used for the loupe
 	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
