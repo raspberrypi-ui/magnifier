@@ -142,8 +142,8 @@ void get_image (void)
 
 		// convert source to coords relative to window
 		sx -= xatr.x;
-		sw -= xatr.x;
 		sy -= xatr.y;
+		sw -= xatr.x;
 		sh -= xatr.y;
 
 		// constrain loupe to window, moving destination if needed
