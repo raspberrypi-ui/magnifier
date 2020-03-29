@@ -1,6 +1,6 @@
 AC_PREREQ(2.59)
 
-AC_INIT([magnifier], [0.1], [simon@raspberrypi.com])
+AC_INIT([mag-pi], [0.1], [simon@raspberrypi.com])
 
 AM_INIT_AUTOMAKE([1.9 foreign])
 

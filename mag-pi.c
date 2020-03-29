@@ -359,15 +359,15 @@ void args (int argc, char **argv)
 			{
 				if (strcmp ("--help", argv[i]) == 0)
 				{
-					puts (	"Usage: loupe [OPTIONS]\n"
+					puts (	"Usage: mag-pi [OPTIONS]\n"
 							"Opens a screen magnifier under the mouse pointer.\n\n"
 							"\t-c [DIAMETER]\t\tSet a circular shape for the loupe\n"
 							"\t-r [WIDTH] [HEIGHT]\tSet a rectamgular shape for the loupe\n"
-							"\t-z MAG\t\t\tSet the magnify factor\n"
+							"\t-s [X] [Y]\t\tStatic window - drag to move\n"
+							"\t-z MAG\t\t\tSet the magnification factor\n"
 							"\t-f\t\t\tEnable a bilinear filter\n"
 							"\t-m\t\t\tFollow focus point\n"
 							"\t-t\t\t\tFollow text cursor\n"
-							"\t-s\t\t\tStatic window - drag to move\n"
 							"\t--help\t\t\tShow this message\n" );
 					exit (EXIT_SUCCESS);
 				}
