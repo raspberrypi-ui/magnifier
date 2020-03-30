@@ -86,6 +86,9 @@ int error_handler (Display *dpy, XErrorEvent *ev)
 
 /* get_image - construct the image to go in the loupe by copying from each window in turn */
 
+#define CONSTRAIN(lo,hi,max,offset)	 if (lo < 0) { offset += -lo; lo = 0; } if (hi > max) hi = max;
+
+
 void get_image (void)
 {
     XImage *im;
@@ -127,18 +130,8 @@ void get_image (void)
         sh = sy + srch;
 
         // constrain loupe to screen, moving destination if needed
-        if (sx < 0)
-        {
-            dx += -sx;
-            sx = 0;
-        }
-        if (sy < 0)
-        {
-            dy += -sy;
-            sy = 0;
-        }
-        if (sw >= screenw) sw = screenw;
-        if (sh >= screenh) sh = screenh;
+        CONSTRAIN (sx, sw, screenw, dx);
+        CONSTRAIN (sy, sh, screenh, dy);
 
         // convert source to coords relative to window
         sx -= xatr.x;
@@ -147,18 +140,8 @@ void get_image (void)
         sh -= xatr.y;
 
         // constrain loupe to window, moving destination if needed
-        if (sx < 0)
-        {
-            dx += -sx;
-            sx = 0;
-        }
-        if (sy < 0)
-        {
-            dy += -sy;
-            sy = 0;
-        }
-        if (sw >= xatr.width) sw = xatr.width;
-        if (sh >= xatr.height) sh = xatr.height;
+        CONSTRAIN (sx, sw, xatr.width, dx);
+        CONSTRAIN (sy, sh, xatr.height, dy);
 
         // convert loupe bounds to width and height
         sw -= sx;
