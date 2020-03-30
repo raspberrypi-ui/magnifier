@@ -409,8 +409,13 @@ static void atspi_event (const AtspiEvent *event, void *data)
 {
     AtspiRect *rect;
     GError *err;
+    static int drag;
 
     if (event->source == NULL) return;
+
+    if (!g_strcmp0 (event->type, "mouse:button:1p")) drag = 1;
+    if (!g_strcmp0 (event->type, "mouse:button:1r")) drag = 0;
+
     if (mvEnable && !g_strcmp0 (event->type, "object:text-caret-moved"))
         rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
     else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused") && event->detail1)
@@ -428,7 +433,7 @@ static void atspi_event (const AtspiEvent *event, void *data)
     }
     else return;
     if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
-    XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x + rect->width / 2, rect->y + rect->height / 2);
+    if (!drag) XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x + rect->width / 2, rect->y + rect->height / 2);
 }
 
 
@@ -464,6 +469,8 @@ int main (int argc, char *argv[])
         AtspiEventListener *listener = atspi_event_listener_new ((AtspiEventListenerCB) atspi_event, NULL, NULL);
         if (mvEnable) atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
         if (fcEnable) atspi_event_listener_register (listener, "object:state-changed:focused", NULL);
+        atspi_event_listener_register (listener, "mouse:button:1p", NULL);
+        atspi_event_listener_register (listener, "mouse:button:1r", NULL);
         pthread_create (&atspi_thread, NULL, atspi_main, NULL);
     }
 
