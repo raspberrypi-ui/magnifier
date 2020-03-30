@@ -409,23 +409,23 @@ static void atspi_event (const AtspiEvent *event, void *data)
 {
     AtspiRect *rect;
     GError *err;
-    Window nfwin;
-    int revert;
 
     if (event->source == NULL) return;
-
-    // don't move mouse on focussed window changes; just inside the same window
-    XGetInputFocus (dsp, &nfwin, &revert);
-    if (nfwin != fwin)
-    {
-        fwin = nfwin;
-        return;
-    }
-
     if (mvEnable && !g_strcmp0 (event->type, "object:text-caret-moved"))
         rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
     else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused") && event->detail1)
+    {
+        // don't move mouse on focussed window changes; just inside the same window
+        Window nfwin;
+        int revert;
+        XGetInputFocus (dsp, &nfwin, &revert);
+        if (nfwin != fwin)
+        {
+            fwin = nfwin;
+            return;
+        }
         rect = atspi_component_get_extents ((AtspiComponent *) event->source, ATSPI_COORD_TYPE_SCREEN, &err);
+    }
     else return;
     if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
     XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x + rect->width / 2, rect->y + rect->height / 2);
