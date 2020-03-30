@@ -3,7 +3,7 @@ Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
 All rights reserved.
 
 Based on MouseLoupe, copyright (c) 2001-2005 Luciano Silva
-	Fabio Leite Vieira, Mauricley Ribas Azevedo, Thiago de Souza Ferreira
+    Fabio Leite Vieira, Mauricley Ribas Azevedo, Thiago de Souza Ferreira
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -43,10 +43,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SHM
 
-#define CIRCLE		0
-#define RECTANGLE	1
+#define CIRCLE      0
+#define RECTANGLE   1
 
-#define EVENT_MASK	PointerMotionMask | PointerMotionHintMask | ButtonMotionMask | ButtonPressMask| ButtonReleaseMask
+#define EVENT_MASK  PointerMotionMask | PointerMotionHintMask | ButtonMotionMask | ButtonPressMask| ButtonReleaseMask
 
 Display *dsp;
 int scr;
@@ -58,14 +58,14 @@ Picture src_picture, dst_picture;
 XRenderPictureAttributes pict_attr;
 XErrorHandler default_handler;
 
-int screenw, screenh;	/* screen size */
-int posx, posy;			/* mouse location */
-int srcw, srch;			/* source pixmap dimensions */
+int screenw, screenh;   /* screen size */
+int posx, posy;         /* mouse location */
+int srcw, srch;         /* source pixmap dimensions */
 
-int shape = RECTANGLE;	/* loupe shape */
-int dstw = 350;			/* loupe width */
-int dsth = 350;			/* loupe height */
-int magstep = 2;		/* magnification factor */
+int shape = RECTANGLE;  /* loupe shape */
+int dstw = 350;         /* loupe width */
+int dsth = 350;         /* loupe height */
+int magstep = 2;        /* magnification factor */
 
 Bool useFilter = False;
 Bool mvEnable = False;
@@ -79,8 +79,8 @@ Bool ignore_errors = False;
 
 int error_handler (Display *dpy, XErrorEvent *ev)
 {
-	if (!ignore_errors) default_handler (dpy, ev);
-	return 0;
+    if (!ignore_errors) default_handler (dpy, ev);
+    return 0;
 }
 
 
@@ -88,118 +88,118 @@ int error_handler (Display *dpy, XErrorEvent *ev)
 
 void get_image (void)
 {
-	XImage *im;
-	XWindowAttributes xatr;
-	Window root, nullwd, *children;
-	int sx, sy, sw, sh, dx, dy, null;
-	unsigned int nwins, wd;
+    XImage *im;
+    XWindowAttributes xatr;
+    Window root, nullwd, *children;
+    int sx, sy, sw, sh, dx, dy, null;
+    unsigned int nwins, wd;
 
-	// get the location of the mouse pointer
-	XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &null, &null, (unsigned *) &null);
+    // get the location of the mouse pointer
+    XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &null, &null, (unsigned *) &null);
 
-	// move the loupe to the top of the stack in case another window has opened on top of it
-	XRaiseWindow (dsp, topwin);
+    // move the loupe to the top of the stack in case another window has opened on top of it
+    XRaiseWindow (dsp, topwin);
 
-	// clear the loupe
-	XSetForeground (dsp, gc, 0);
-	XFillRectangle (dsp, srcpixmap, gc, 0, 0, srcw, srch);
+    // clear the loupe
+    XSetForeground (dsp, gc, 0);
+    XFillRectangle (dsp, srcpixmap, gc, 0, 0, srcw, srch);
 
-	// read the tree of windows
-	if (!XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins)) return;
+    // read the tree of windows
+    if (!XQueryTree (dsp, rootwin, &root, &nullwd, &children, &nwins)) return;
 
-	// loop through all windows from the bottom up, ignoring the top window (which should be the loupe)
-	for (wd = 0; wd < nwins - 1; wd++)
-	{
-		// ignore any windows which have no output, or which are not viewable
-		ignore_errors = True;
-		if (!XGetWindowAttributes (dsp, children[wd], &xatr)) continue;
-		ignore_errors = False;
-		if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
+    // loop through all windows from the bottom up, ignoring the top window (which should be the loupe)
+    for (wd = 0; wd < nwins - 1; wd++)
+    {
+        // ignore any windows which have no output, or which are not viewable
+        ignore_errors = True;
+        if (!XGetWindowAttributes (dsp, children[wd], &xatr)) continue;
+        ignore_errors = False;
+        if (xatr.class != InputOutput || xatr.map_state != IsViewable) continue;
 
-		// start with destination point in loupe at origin
-		dx = 0;
-		dy = 0;
+        // start with destination point in loupe at origin
+        dx = 0;
+        dy = 0;
 
-		// calculate loupe bounds in screen coords
-		sx = posx - srcw / 2;
-		sy = posy - srch / 2;
-		sw = sx + srcw;
-		sh = sy + srch;
+        // calculate loupe bounds in screen coords
+        sx = posx - srcw / 2;
+        sy = posy - srch / 2;
+        sw = sx + srcw;
+        sh = sy + srch;
 
-		// constrain loupe to screen, moving destination if needed
-		if (sx < 0)
-		{
-			dx += -sx;
-			sx = 0;
-		}
-		if (sy < 0)
-		{
-			dy += -sy;
-			sy = 0;
-		}
-		if (sw >= screenw) sw = screenw;
-		if (sh >= screenh) sh = screenh;
+        // constrain loupe to screen, moving destination if needed
+        if (sx < 0)
+        {
+            dx += -sx;
+            sx = 0;
+        }
+        if (sy < 0)
+        {
+            dy += -sy;
+            sy = 0;
+        }
+        if (sw >= screenw) sw = screenw;
+        if (sh >= screenh) sh = screenh;
 
-		// convert source to coords relative to window
-		sx -= xatr.x;
-		sy -= xatr.y;
-		sw -= xatr.x;
-		sh -= xatr.y;
+        // convert source to coords relative to window
+        sx -= xatr.x;
+        sy -= xatr.y;
+        sw -= xatr.x;
+        sh -= xatr.y;
 
-		// constrain loupe to window, moving destination if needed
-		if (sx < 0)
-		{
-			dx += -sx;
-			sx = 0;
-		}
-		if (sy < 0)
-		{
-			dy += -sy;
-			sy = 0;
-		}
-		if (sw >= xatr.width) sw = xatr.width;
-		if (sh >= xatr.height) sh = xatr.height;
+        // constrain loupe to window, moving destination if needed
+        if (sx < 0)
+        {
+            dx += -sx;
+            sx = 0;
+        }
+        if (sy < 0)
+        {
+            dy += -sy;
+            sy = 0;
+        }
+        if (sw >= xatr.width) sw = xatr.width;
+        if (sh >= xatr.height) sh = xatr.height;
 
-		// convert loupe bounds to width and height
-		sw -= sx;
-		sh -= sy;
-		if (sw <= 0 || sh <= 0) continue;
+        // convert loupe bounds to width and height
+        sw -= sx;
+        sh -= sy;
+        if (sw <= 0 || sh <= 0) continue;
 
-		// copy the source image to the destination pixmap
+        // copy the source image to the destination pixmap
 #ifdef SHM
-		XShmSegmentInfo shi;
-		im = XShmCreateImage (dsp, DefaultVisual (dsp, scr), DefaultDepth (dsp, scr), ZPixmap, NULL, &shi, sw, sh);
-		shi.shmid = shmget (IPC_PRIVATE, (unsigned int) (im->bytes_per_line * im->height), IPC_CREAT | 0777);
-		shi.shmaddr = im->data = (char *) shmat (shi.shmid, 0, 0);
-		shi.readOnly = False;
-		XShmAttach (dsp, &shi);
-		XShmGetImage (dsp, children[wd], im, sx, sy, AllPlanes);
-		XShmPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh, False);
-		XShmDetach (dsp, &shi);
-		XDestroyImage (im);
-		shmdt (shi.shmaddr);
-		shmctl (shi.shmid, IPC_RMID, 0);
+        XShmSegmentInfo shi;
+        im = XShmCreateImage (dsp, DefaultVisual (dsp, scr), DefaultDepth (dsp, scr), ZPixmap, NULL, &shi, sw, sh);
+        shi.shmid = shmget (IPC_PRIVATE, (unsigned int) (im->bytes_per_line * im->height), IPC_CREAT | 0777);
+        shi.shmaddr = im->data = (char *) shmat (shi.shmid, 0, 0);
+        shi.readOnly = False;
+        XShmAttach (dsp, &shi);
+        XShmGetImage (dsp, children[wd], im, sx, sy, AllPlanes);
+        XShmPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh, False);
+        XShmDetach (dsp, &shi);
+        XDestroyImage (im);
+        shmdt (shi.shmaddr);
+        shmctl (shi.shmid, IPC_RMID, 0);
 #else
-		im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
-		if (im != NULL)
-		{
-			XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
-			XDestroyImage (im);
-		}
+        im = XGetImage (dsp, children[wd], sx, sy, sw, sh, AllPlanes, ZPixmap);
+        if (im != NULL)
+        {
+            XPutImage (dsp, srcpixmap, gc, im, 0, 0, dx, dy, sw, sh);
+            XDestroyImage (im);
+        }
 #endif
 
-		// composite this window segment over other window segments
-		XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
-	}
+        // composite this window segment over other window segments
+        XRenderComposite (dsp, PictOpOver, src_picture, None, dst_picture, 0, 0, 0, 0, 0, 0, dstw, dsth);
+    }
 
-	// draw the border
-	if (shape == CIRCLE) XDrawArc (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2, 0, 360 * 64);
-	else XDrawRectangle (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2);
+    // draw the border
+    if (shape == CIRCLE) XDrawArc (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2, 0, 360 * 64);
+    else XDrawRectangle (dsp, dstpixmap, hudgc, 1, 1, dstw - 2, dsth - 2);
 
-	// update the loupe from the composite pixmap
-	XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
+    // update the loupe from the composite pixmap
+    XCopyArea (dsp, dstpixmap, topwin, gc, 0, 0, dstw, dsth, 0, 0);
 
-	XFree (children);
+    XFree (children);
 }
 
 
@@ -207,36 +207,36 @@ void get_image (void)
 
 void setup_pixmaps (void)
 {
-	XTransform t;
+    XTransform t;
 
-	// calculate source dimensions
-	srcw = dstw / magstep + ((dstw % magstep) ? 1 : 0);
-	srch = dsth / magstep + ((dsth % magstep) ? 1 : 0);
+    // calculate source dimensions
+    srcw = dstw / magstep + ((dstw % magstep) ? 1 : 0);
+    srch = dsth / magstep + ((dsth % magstep) ? 1 : 0);
 
-	// create the pixmaps and pictures used for scaling
-	srcpixmap = XCreatePixmap (dsp, rootwin, srcw, srch, DefaultDepth (dsp, scr));
-	dstpixmap = XCreatePixmap (dsp, rootwin, dstw, dsth, DefaultDepth (dsp, scr));
-	src_picture = XRenderCreatePicture (dsp, srcpixmap, XRenderFindStandardFormat (dsp, PictStandardRGB24), CPRepeat, &pict_attr);
-	dst_picture = XRenderCreatePicture (dsp, dstpixmap, XRenderFindStandardFormat (dsp, PictStandardRGB24), CPRepeat, &pict_attr);
+    // create the pixmaps and pictures used for scaling
+    srcpixmap = XCreatePixmap (dsp, rootwin, srcw, srch, DefaultDepth (dsp, scr));
+    dstpixmap = XCreatePixmap (dsp, rootwin, dstw, dsth, DefaultDepth (dsp, scr));
+    src_picture = XRenderCreatePicture (dsp, srcpixmap, XRenderFindStandardFormat (dsp, PictStandardRGB24), CPRepeat, &pict_attr);
+    dst_picture = XRenderCreatePicture (dsp, dstpixmap, XRenderFindStandardFormat (dsp, PictStandardRGB24), CPRepeat, &pict_attr);
 
-	// create a scaling matrix (zoom)
-	t.matrix[0][0] = XDoubleToFixed (1.0 / magstep);
-	t.matrix[0][1] = 0.0;
-	t.matrix[0][2] = 0.0;
+    // create a scaling matrix (zoom)
+    t.matrix[0][0] = XDoubleToFixed (1.0 / magstep);
+    t.matrix[0][1] = 0.0;
+    t.matrix[0][2] = 0.0;
 
-	t.matrix[1][0] = 0.0;
-	t.matrix[1][1] = XDoubleToFixed (1.0 / magstep);
-	t.matrix[1][2] = 0.0;
+    t.matrix[1][0] = 0.0;
+    t.matrix[1][1] = XDoubleToFixed (1.0 / magstep);
+    t.matrix[1][2] = 0.0;
 
-	t.matrix[2][0] = 0.0;
-	t.matrix[2][1] = 0.0;
-	t.matrix[2][2] = XDoubleToFixed (1.0);
+    t.matrix[2][0] = 0.0;
+    t.matrix[2][1] = 0.0;
+    t.matrix[2][2] = XDoubleToFixed (1.0);
 
-	// set the transformation matrix
-	XRenderSetPictureTransform (dsp, src_picture, &t);
+    // set the transformation matrix
+    XRenderSetPictureTransform (dsp, src_picture, &t);
 
-	// set a bilinear filter if requested
-	if (useFilter == True) XRenderSetPictureFilter (dsp, src_picture, FilterBilinear, 0, 0);
+    // set a bilinear filter if requested
+    if (useFilter == True) XRenderSetPictureFilter (dsp, src_picture, FilterBilinear, 0, 0);
 }
 
 
@@ -244,49 +244,49 @@ void setup_pixmaps (void)
 
 void setup_loupe (void)
 {
-	Pixmap bitmap;
-	XColor col;
+    Pixmap bitmap;
+    XColor col;
 
-	// set the background and border
-	XSetWindowBorderPixmap (dsp, topwin, CopyFromParent);
-	XSetWindowBackgroundPixmap (dsp, topwin, None);
+    // set the background and border
+    XSetWindowBorderPixmap (dsp, topwin, CopyFromParent);
+    XSetWindowBackgroundPixmap (dsp, topwin, None);
 
-	// create a pixmap for the output window
-	bitmap = XCreatePixmap (dsp, rootwin, dstw, dsth, 1);
-	hudgc = XCreateGC (dsp, bitmap, 0, NULL);
+    // create a pixmap for the output window
+    bitmap = XCreatePixmap (dsp, rootwin, dstw, dsth, 1);
+    hudgc = XCreateGC (dsp, bitmap, 0, NULL);
 
-	// erase the whole area
-	XSetForeground (dsp, hudgc, 0);
-	XFillRectangle (dsp, bitmap, hudgc, 0, 0, dstw, dsth);
+    // erase the whole area
+    XSetForeground (dsp, hudgc, 0);
+    XFillRectangle (dsp, bitmap, hudgc, 0, 0, dstw, dsth);
 
-	// draw the active area of the loupe
-	XSetForeground (dsp, hudgc, 1);
-	if (shape == CIRCLE) XFillArc (dsp, bitmap, hudgc, 0, 0, dstw, dsth, 0, 360 * 64);
-	else XFillRectangle (dsp, bitmap, hudgc, 0, 0, dstw, dsth);
+    // draw the active area of the loupe
+    XSetForeground (dsp, hudgc, 1);
+    if (shape == CIRCLE) XFillArc (dsp, bitmap, hudgc, 0, 0, dstw, dsth, 0, 360 * 64);
+    else XFillRectangle (dsp, bitmap, hudgc, 0, 0, dstw, dsth);
 
-	// clear an input area so mouse clicks pass through
-	XSetForeground (dsp, hudgc, 0);
-	XFillRectangle (dsp, bitmap, hudgc, dstw / 2, dsth / 2, 1, 1);
+    // clear an input area so mouse clicks pass through
+    XSetForeground (dsp, hudgc, 0);
+    XFillRectangle (dsp, bitmap, hudgc, dstw / 2, dsth / 2, 1, 1);
 
-	// use the resulting pixmap as a mask on the loupe window
-	XShapeCombineMask (dsp, topwin, ShapeClip, 0, 0, bitmap, ShapeSet);
-	XShapeCombineMask (dsp, topwin, ShapeBounding, 0, 0, bitmap, ShapeSet);
+    // use the resulting pixmap as a mask on the loupe window
+    XShapeCombineMask (dsp, topwin, ShapeClip, 0, 0, bitmap, ShapeSet);
+    XShapeCombineMask (dsp, topwin, ShapeBounding, 0, 0, bitmap, ShapeSet);
 
-	XFreeGC (dsp, hudgc);
-	XFreePixmap (dsp, bitmap);
+    XFreeGC (dsp, hudgc);
+    XFreePixmap (dsp, bitmap);
 
-	// draw the border
-	hudgc = XCreateGC (dsp, topwin, 0, NULL);
-	XParseColor (dsp, DefaultColormap (dsp, scr), "yellow", &col);
-	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
-	XSetForeground (dsp, hudgc, col.pixel);
+    // draw the border
+    hudgc = XCreateGC (dsp, topwin, 0, NULL);
+    XParseColor (dsp, DefaultColormap (dsp, scr), "yellow", &col);
+    XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
+    XSetForeground (dsp, hudgc, col.pixel);
 
-	// draw the background
-	XParseColor (dsp, DefaultColormap (dsp, scr), NULL, &col);
-	XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
-	XSetBackground (dsp, hudgc, col.pixel);
+    // draw the background
+    XParseColor (dsp, DefaultColormap (dsp, scr), NULL, &col);
+    XAllocColor (dsp, DefaultColormap (dsp, scr), &col);
+    XSetBackground (dsp, hudgc, col.pixel);
 
-	XMapRaised (dsp, topwin);
+    XMapRaised (dsp, topwin);
 }
 
 
@@ -294,40 +294,40 @@ void setup_loupe (void)
 
 void init_screen (void)
 {
-	XSetWindowAttributes xset_attr;
-	int event_base,	error_base;
+    XSetWindowAttributes xset_attr;
+    int event_base, error_base;
 
-	dsp = XOpenDisplay (NULL);
-	if (dsp == NULL)
-	{
-		fprintf (stderr, "Cannot open display conection\n");
-		exit (EXIT_FAILURE);
-	}
+    dsp = XOpenDisplay (NULL);
+    if (dsp == NULL)
+    {
+        fprintf (stderr, "Cannot open display conection\n");
+        exit (EXIT_FAILURE);
+    }
 
-	scr = DefaultScreen (dsp);
-	rootwin = RootWindow (dsp, scr);
-	gc = XCreateGC (dsp, rootwin, 0, NULL);
-	screenw = WidthOfScreen (DefaultScreenOfDisplay (dsp));
-	screenh = HeightOfScreen (DefaultScreenOfDisplay (dsp));
+    scr = DefaultScreen (dsp);
+    rootwin = RootWindow (dsp, scr);
+    gc = XCreateGC (dsp, rootwin, 0, NULL);
+    screenw = WidthOfScreen (DefaultScreenOfDisplay (dsp));
+    screenh = HeightOfScreen (DefaultScreenOfDisplay (dsp));
 
-	// make sure a static loupe will be onscreen
-	if (posx >= screenw - dstw - 10) posx = screenw - dstw - 10;
-	if (posy >= screenh - dsth - 10) posy = screenh - dsth - 10;
+    // make sure a static loupe will be onscreen
+    if (posx >= screenw - dstw - 10) posx = screenw - dstw - 10;
+    if (posy >= screenh - dsth - 10) posy = screenh - dsth - 10;
 
-	// create the window which will be used for the loupe
-	topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
-	XSelectInput (dsp, topwin, EVENT_MASK);
+    // create the window which will be used for the loupe
+    topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
+    XSelectInput (dsp, topwin, EVENT_MASK);
 
-	if (!XCompositeQueryExtension (dsp, &event_base, &error_base))
-	{
-		fprintf (stderr, "No composite extension\n");
-		exit (EXIT_FAILURE);
-	}
+    if (!XCompositeQueryExtension (dsp, &event_base, &error_base))
+    {
+        fprintf (stderr, "No composite extension\n");
+        exit (EXIT_FAILURE);
+    }
 
-	// enable the composite extension
-	XCompositeRedirectSubwindows (dsp, rootwin, CompositeRedirectAutomatic);
-	xset_attr.override_redirect = True;
-	XChangeWindowAttributes (dsp, topwin, CWOverrideRedirect, &xset_attr);
+    // enable the composite extension
+    XCompositeRedirectSubwindows (dsp, rootwin, CompositeRedirectAutomatic);
+    xset_attr.override_redirect = True;
+    XChangeWindowAttributes (dsp, topwin, CWOverrideRedirect, &xset_attr);
 }
 
 
@@ -335,11 +335,11 @@ void init_screen (void)
 
 int intarg (char *str, int low, int high)
 {
-	int val;
-	if (sscanf (str, "%d", &val) != 1) return -1;
-	if (high == -1) return val;
-	if (val < low || val > high) return -1;
-	return val;
+    int val;
+    if (sscanf (str, "%d", &val) != 1) return -1;
+    if (high == -1) return val;
+    if (val < low || val > high) return -1;
+    return val;
 }
 
 
@@ -349,75 +349,75 @@ int intarg (char *str, int low, int high)
 
 void args (int argc, char **argv)
 {
-	int i, val;
+    int i, val;
 
-	for (i = 1; i < argc; i++)
-	{
-		if (argv[i][0] == '-')
-		{
-			if (strlen(argv[i]) != 2)
-			{
-				if (strcmp ("--help", argv[i]) == 0)
-				{
-					puts (	"Usage: mag-pi [OPTIONS]\n"
-							"Opens a screen magnifier under the mouse pointer.\n\n"
-							"\t-c [DIAMETER]\t\tSet a circular shape for the loupe\n"
-							"\t-r [WIDTH] [HEIGHT]\tSet a rectamgular shape for the loupe\n"
-							"\t-s [X] [Y]\t\tStatic window - drag to move\n"
-							"\t-z MAG\t\t\tSet the magnification factor\n"
-							"\t-f\t\t\tEnable a bilinear filter\n"
-							"\t-m\t\t\tFollow focus point\n"
-							"\t-t\t\t\tFollow text cursor\n"
-							"\t--help\t\t\tShow this message\n" );
-					exit (EXIT_SUCCESS);
-				}
-				else goto argerr;
-			}
+    for (i = 1; i < argc; i++)
+    {
+        if (argv[i][0] == '-')
+        {
+            if (strlen(argv[i]) != 2)
+            {
+                if (strcmp ("--help", argv[i]) == 0)
+                {
+                    puts (  "Usage: mag-pi [OPTIONS]\n"
+                            "Opens a screen magnifier under the mouse pointer.\n\n"
+                            "\t-c [DIAMETER]\t\tSet a circular shape for the loupe\n"
+                            "\t-r [WIDTH] [HEIGHT]\tSet a rectamgular shape for the loupe\n"
+                            "\t-s [X] [Y]\t\tStatic window - drag to move\n"
+                            "\t-z MAG\t\t\tSet the magnification factor\n"
+                            "\t-f\t\t\tEnable a bilinear filter\n"
+                            "\t-m\t\t\tFollow focus point\n"
+                            "\t-t\t\t\tFollow text cursor\n"
+                            "\t--help\t\t\tShow this message\n" );
+                    exit (EXIT_SUCCESS);
+                }
+                else goto argerr;
+            }
 
-			switch (argv[i][1])
-			{
-				case 'f': 	useFilter = True;
-							break;
+            switch (argv[i][1])
+            {
+                case 'f':   useFilter = True;
+                            break;
 
-				case 'm': 	fcEnable = True;
-							break;
+                case 'm':   fcEnable = True;
+                            break;
 
-				case 't': 	mvEnable = True;
-							break;
+                case 't':   mvEnable = True;
+                            break;
 
-				case 's': 	statLoupe = True;
-							GETINT (0, -1);
-							posx = val;
-							GETINT (0, -1);
-							posy = val;
-							break;
+                case 's':   statLoupe = True;
+                            GETINT (0, -1);
+                            posx = val;
+                            GETINT (0, -1);
+                            posy = val;
+                            break;
 
-				case 'z':	GETINT (2, 16);
-							magstep = val;
-							break;
+                case 'z':   GETINT (2, 16);
+                            magstep = val;
+                            break;
 
-				case 'c':	shape = CIRCLE;
-							GETINT (100, 600);
-							dstw = dsth = val;
-							break;
+                case 'c':   shape = CIRCLE;
+                            GETINT (100, 600);
+                            dstw = dsth = val;
+                            break;
 
-				case 'r':	shape = RECTANGLE;
-							GETINT (100, 800);
-							dstw = dsth = val;
-							GETINT (50, 600);
-							dsth = val;
-							break;
+                case 'r':   shape = RECTANGLE;
+                            GETINT (100, 800);
+                            dstw = dsth = val;
+                            GETINT (50, 600);
+                            dsth = val;
+                            break;
 
-				default:	goto argerr;
-			}
-		}
-		else goto argerr;
-	}
-	return;
+                default:    goto argerr;
+            }
+        }
+        else goto argerr;
+    }
+    return;
 
 argerr:
-	fprintf (stderr, "Invalid option : %s\n", argv[i]);
-	exit (EXIT_FAILURE);
+    fprintf (stderr, "Invalid option : %s\n", argv[i]);
+    exit (EXIT_FAILURE);
 }
 
 
@@ -425,28 +425,28 @@ argerr:
 
 static void atspi_event (const AtspiEvent *event, void *data)
 {
-	AtspiRect *rect;
-	GError *err;
+    AtspiRect *rect;
+    GError *err;
 
-	if (event->source == NULL) return;
-	if (mvEnable && !g_strcmp0 (event->type, "object:text-caret-moved"))
-		rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
-	else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused") && event->detail1)
-	{
-		// don't move mouse on focussed window changes; just inside the same window
-		Window nfwin;
-		int revert;
-		XGetInputFocus (dsp, &nfwin, &revert);
-		if (nfwin != fwin)
-		{
-			fwin = nfwin;
-			return;
-		}
-		rect = atspi_component_get_extents ((AtspiComponent *) event->source, ATSPI_COORD_TYPE_SCREEN, &err);
-	}
-	else return;
-	if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
-	XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x + rect->width / 2, rect->y + rect->height / 2);
+    if (event->source == NULL) return;
+    if (mvEnable && !g_strcmp0 (event->type, "object:text-caret-moved"))
+        rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
+    else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused") && event->detail1)
+    {
+        // don't move mouse on focussed window changes; just inside the same window
+        Window nfwin;
+        int revert;
+        XGetInputFocus (dsp, &nfwin, &revert);
+        if (nfwin != fwin)
+        {
+            fwin = nfwin;
+            return;
+        }
+        rect = atspi_component_get_extents ((AtspiComponent *) event->source, ATSPI_COORD_TYPE_SCREEN, &err);
+    }
+    else return;
+    if (rect->x <= 0 || rect->y <= 0 || rect->width <= 0 || rect->height <= 0) return;
+    XWarpPointer (dsp, None, rootwin, None, None, None, None, rect->x + rect->width / 2, rect->y + rect->height / 2);
 }
 
 
@@ -454,8 +454,8 @@ static void atspi_event (const AtspiEvent *event, void *data)
 
 void *atspi_main (void *param)
 {
-	atspi_event_main ();
-	return NULL;
+    atspi_event_main ();
+    return NULL;
 }
 
 
@@ -463,49 +463,49 @@ void *atspi_main (void *param)
 
 int main (int argc, char *argv[])
 {
-	XEvent ev;
-	int drag = 0;
+    XEvent ev;
+    int drag = 0;
 
-	args (argc, argv);
+    args (argc, argv);
 
-	XInitThreads ();
-	default_handler = XSetErrorHandler (error_handler);
+    XInitThreads ();
+    default_handler = XSetErrorHandler (error_handler);
 
-	init_screen ();
-	setup_pixmaps ();
-	setup_loupe ();
+    init_screen ();
+    setup_pixmaps ();
+    setup_loupe ();
 
-	if (mvEnable || fcEnable)
-	{
-		pthread_t atspi_thread;
-		atspi_init ();
-		AtspiEventListener *listener = atspi_event_listener_new ((AtspiEventListenerCB) atspi_event, NULL, NULL);
-		if (mvEnable) atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
-		if (fcEnable) atspi_event_listener_register (listener, "object:state-changed:focused", NULL);
-		pthread_create (&atspi_thread, NULL, atspi_main, NULL);
-	}
+    if (mvEnable || fcEnable)
+    {
+        pthread_t atspi_thread;
+        atspi_init ();
+        AtspiEventListener *listener = atspi_event_listener_new ((AtspiEventListenerCB) atspi_event, NULL, NULL);
+        if (mvEnable) atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
+        if (fcEnable) atspi_event_listener_register (listener, "object:state-changed:focused", NULL);
+        pthread_create (&atspi_thread, NULL, atspi_main, NULL);
+    }
 
-	while (1)
-	{
-		get_image ();
-		if (statLoupe)
-		{
-			if (XCheckWindowEvent (dsp, topwin, EVENT_MASK, &ev))
-			{
-				if (ev.type == ButtonPress) drag = 1;
-				if (ev.type == ButtonRelease)
-				{
-					drag = 0;
-					system ("lxpanelctl command magnifier pos");
-				}
-				if (ev.type == MotionNotify && drag) XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
-			}
-		}
-		else XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
-	}
+    while (1)
+    {
+        get_image ();
+        if (statLoupe)
+        {
+            if (XCheckWindowEvent (dsp, topwin, EVENT_MASK, &ev))
+            {
+                if (ev.type == ButtonPress) drag = 1;
+                if (ev.type == ButtonRelease)
+                {
+                    drag = 0;
+                    system ("lxpanelctl command magnifier pos");
+                }
+                if (ev.type == MotionNotify && drag) XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
+            }
+        }
+        else XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
+    }
 
-	XCloseDisplay (dsp);
-	exit (EXIT_SUCCESS);
+    XCloseDisplay (dsp);
+    exit (EXIT_SUCCESS);
 }
 
 /* End of file */
