@@ -417,14 +417,17 @@ static void atspi_event (const AtspiEvent *event, void *data)
     if (!g_strcmp0 (event->type, "mouse:button:1r")) drag = 0;
 
     if (mvEnable && !g_strcmp0 (event->type, "object:text-caret-moved"))
+    {
+        // any caret move triggers this, including in non-focused windows - can't find a way to stop this...
         rect = atspi_text_get_character_extents ((AtspiText *) event->source, event->detail1, ATSPI_COORD_TYPE_SCREEN, &err);
+    }
     else if (fcEnable && !g_strcmp0 (event->type, "object:state-changed:focused") && event->detail1)
     {
         // don't move mouse on focussed window changes; just inside the same window
         Window nfwin;
         int revert;
         XGetInputFocus (dsp, &nfwin, &revert);
-        if (nfwin != fwin)
+        if (fwin != nfwin)
         {
             fwin = nfwin;
             return;
@@ -467,10 +470,13 @@ int main (int argc, char *argv[])
         pthread_t atspi_thread;
         atspi_init ();
         AtspiEventListener *listener = atspi_event_listener_new ((AtspiEventListenerCB) atspi_event, NULL, NULL);
-        if (mvEnable) atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
+        if (mvEnable)
+        {
+			atspi_event_listener_register (listener, "object:text-caret-moved", NULL);
+			atspi_event_listener_register (listener, "mouse:button:1p", NULL);
+			atspi_event_listener_register (listener, "mouse:button:1r", NULL);
+        }
         if (fcEnable) atspi_event_listener_register (listener, "object:state-changed:focused", NULL);
-        atspi_event_listener_register (listener, "mouse:button:1p", NULL);
-        atspi_event_listener_register (listener, "mouse:button:1r", NULL);
         pthread_create (&atspi_thread, NULL, atspi_main, NULL);
     }
 
