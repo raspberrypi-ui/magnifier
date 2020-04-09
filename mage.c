@@ -73,12 +73,14 @@ Bool fcEnable = False;
 Bool statLoupe = False;
 
 Bool ignore_errors = False;
+Bool allowErrors = False;
 
 
 /* error handler - allows errors to be masked; otherwise calls X default handler */
 
 int error_handler (Display *dpy, XErrorEvent *ev)
 {
+    if (!allowErrors) return 0;
     if (!ignore_errors) default_handler (dpy, ev);
     return 0;
 }
@@ -388,6 +390,9 @@ void args (int argc, char **argv)
                             dstw = dsth = val;
                             GETINT (50, 600);
                             dsth = val;
+                            break;
+
+                case 'e':   allowErrors = True;
                             break;
 
                 default:    goto argerr;
