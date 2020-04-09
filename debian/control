@@ -8,7 +8,7 @@ Homepage: https://www.raspberrypi.org/
 
 Package: mage
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libx11-6, libxext6, libxcomposite1, libxrender1, libatspi2.0-0
+Depends: ${shlibs:Depends}, ${misc:Depends}, libx11-6, libxext6, libxcomposite1, libxrender1, libatspi2.0-0, lxplug-magnifier
 Description: Virtual magnifier application
  Provides a window which shows a magnified view of the screen around
  the mouse cursor, with various accessibility functions
