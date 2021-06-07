@@ -66,6 +66,7 @@ int shape = RECTANGLE;  /* loupe shape */
 int dstw = 350;         /* loupe width */
 int dsth = 350;         /* loupe height */
 int magstep = 2;        /* magnification factor */
+int offset = 0;         /* offset of centre point */
 
 Bool useFilter = False;
 Bool mvEnable = False;
@@ -250,7 +251,7 @@ void setup_loupe (void)
 
     // clear an input area so mouse clicks pass through
     XSetForeground (dsp, hudgc, 0);
-    XFillRectangle (dsp, bitmap, hudgc, dstw / 2, dsth / 2, 1, 1);
+    XFillRectangle (dsp, bitmap, hudgc, dstw / 2 + offset, dsth / 2 + offset, 1, 1);
 
     // use the resulting pixmap as a mask on the loupe window
     XShapeCombineMask (dsp, topwin, ShapeClip, 0, 0, bitmap, ShapeSet);
@@ -349,6 +350,7 @@ void args (int argc, char **argv)
                             "\t-r [WIDTH] [HEIGHT]\tSet a rectamgular shape for the loupe\n"
                             "\t-s [X] [Y]\t\tStatic window - drag to move\n"
                             "\t-z MAG\t\t\tSet the magnification factor\n"
+                            "\t-o OFFSET\t\tSet the offset of the pointer from the centre of the loupe\n"
                             "\t-f\t\t\tEnable a bilinear filter\n"
                             "\t-m\t\t\tFollow focus point\n"
                             "\t-t\t\t\tFollow text cursor\n"
@@ -390,6 +392,10 @@ void args (int argc, char **argv)
                             dstw = dsth = val;
                             GETINT (50, 600);
                             dsth = val;
+                            break;
+
+                case 'o':   GETINT (0, 20);
+                            offset = val;
                             break;
 
                 case 'e':   allowErrors = True;
