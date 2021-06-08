@@ -344,7 +344,7 @@ void args (int argc, char **argv)
             {
                 if (strcmp ("--help", argv[i]) == 0)
                 {
-                    puts (  "Usage: mag-pi [OPTIONS]\n"
+                    puts (  "Usage: mage [OPTIONS]\n"
                             "Opens a screen magnifier under the mouse pointer.\n\n"
                             "\t-c [DIAMETER]\t\tSet a circular shape for the loupe\n"
                             "\t-r [WIDTH] [HEIGHT]\tSet a rectamgular shape for the loupe\n"
