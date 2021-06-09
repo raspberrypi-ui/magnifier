@@ -77,22 +77,24 @@ Bool statLoupe = False;
 Bool ignore_errors = False;
 Bool allowErrors = False;
 
+Atom wt_dialog;
+Atom wt_normal;
+#if 0
 Atom wt_desktop;
 Atom wt_dock;
 Atom wt_toolbar;
 Atom wt_menu;
 Atom wt_utility;
 Atom wt_splash;
-Atom wt_dialog;
 Atom wt_dropdown_menu;
 Atom wt_popup_menu;
 Atom wt_tooltip;
 Atom wt_notification;
 Atom wt_combo;
 Atom wt_dnd;
-Atom wt_normal;
+#endif
 
-/* error handler - allows errors to be masked; otherwise calls X default handler */
+/* error_handler - allows errors to be masked; otherwise calls X default handler */
 
 int error_handler (Display *dpy, XErrorEvent *ev)
 {
@@ -101,23 +103,31 @@ int error_handler (Display *dpy, XErrorEvent *ev)
     return 0;
 }
 
+
+/* init_atoms - get the values of the atoms of the window types of interest */
+
 void init_atoms (void)
 {
+    wt_dialog = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DIALOG", True);
+    wt_normal = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_NORMAL", True);
+#if 0
     wt_desktop = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DESKTOP", True);
     wt_dock = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DOCK", True);
     wt_toolbar = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_TOOLBAR", True);
     wt_menu = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_MENU", True);
     wt_utility = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_UTILITY", True);
     wt_splash = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_SPLASH", True);
-    wt_dialog = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DIALOG", True);
     wt_dropdown_menu = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", True);
     wt_popup_menu = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_POPUP_MENU", True);
     wt_tooltip = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_TOOLTIP", True);
     wt_notification = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_NOTIFICATION", True);
     wt_combo = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_COMBO", True);
     wt_dnd = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DND", True);
-    wt_normal = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_NORMAL", True);
+#endif
 }
+
+
+/* get_wd_type - get the type of the supplied window */
 
 Atom get_wd_type (Display *dsp, Window wd)
 {
@@ -131,6 +141,7 @@ Atom get_wd_type (Display *dsp, Window wd)
         && items)
     {
         type = *((Atom *) data);
+        XFree (data);
     }
     else
     {
@@ -141,10 +152,12 @@ Atom get_wd_type (Display *dsp, Window wd)
             type = *((Atom *) data);
         }
         else type = 0;
+        XFree (data);
         XFree (ch);
     }
     return type;
 }
+
 
 /* get_image - construct the image to go in the loupe by copying from each window in turn */
 
