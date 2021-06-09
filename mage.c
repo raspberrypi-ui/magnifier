@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <pthread.h>
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <X11/extensions/shape.h>
 #include <X11/extensions/Xcomposite.h>
 #include <X11/extensions/Xrender.h>
@@ -76,6 +77,20 @@ Bool statLoupe = False;
 Bool ignore_errors = False;
 Bool allowErrors = False;
 
+Atom wt_desktop;
+Atom wt_dock;
+Atom wt_toolbar;
+Atom wt_menu;
+Atom wt_utility;
+Atom wt_splash;
+Atom wt_dialog;
+Atom wt_dropdown_menu;
+Atom wt_popup_menu;
+Atom wt_tooltip;
+Atom wt_notification;
+Atom wt_combo;
+Atom wt_dnd;
+Atom wt_normal;
 
 /* error handler - allows errors to be masked; otherwise calls X default handler */
 
@@ -86,10 +101,55 @@ int error_handler (Display *dpy, XErrorEvent *ev)
     return 0;
 }
 
+void init_atoms (void)
+{
+    wt_desktop = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DESKTOP", True);
+    wt_dock = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DOCK", True);
+    wt_toolbar = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_TOOLBAR", True);
+    wt_menu = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_MENU", True);
+    wt_utility = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_UTILITY", True);
+    wt_splash = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_SPLASH", True);
+    wt_dialog = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DIALOG", True);
+    wt_dropdown_menu = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", True);
+    wt_popup_menu = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_POPUP_MENU", True);
+    wt_tooltip = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_TOOLTIP", True);
+    wt_notification = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_NOTIFICATION", True);
+    wt_combo = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_COMBO", True);
+    wt_dnd = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_DND", True);
+    wt_normal = XInternAtom (dsp, "_NET_WM_WINDOW_TYPE_NORMAL", True);
+}
+
+Atom get_wd_type (Display *dsp, Window wd)
+{
+    Window chroot, *ch, nullwd;
+    Atom type;
+    int ret_fmt, nch;
+    unsigned long items, left;
+    unsigned char *data;
+
+    if (XGetWindowProperty (dsp, wd, XInternAtom (dsp, "_NET_WM_WINDOW_TYPE", FALSE), 0L, 0x7FFFFFFF, False, XA_ATOM, &type, &ret_fmt, &items, &left, &data) == Success
+        && items)
+    {
+        type = *((Atom *) data);
+    }
+    else
+    {
+        XQueryTree (dsp, wd, &chroot, &nullwd, &ch, &nch);
+        if (nch && XGetWindowProperty (dsp, ch[0], XInternAtom (dsp, "_NET_WM_WINDOW_TYPE", FALSE), 0L, 0x7FFFFFFF, False, XA_ATOM, &type, &ret_fmt, &items, &left, &data) == Success
+            && items)
+        {
+            type = *((Atom *) data);
+        }
+        else type = 0;
+        XFree (ch);
+    }
+    return type;
+}
 
 /* get_image - construct the image to go in the loupe by copying from each window in turn */
 
 #define CONSTRAIN(lo,hi,max,offset)	 if (lo < 0) { offset += -lo; lo = 0; } if (hi > max) hi = max;
+#define CONSTRAIN_BORDER(lo,hi,max,offset,sbord,fbord)	 if (lo < sbord) { offset += sbord - lo; lo = sbord; } if (hi > max - fbord) hi = max - fbord;
 
 void get_image (void)
 {
@@ -142,8 +202,30 @@ void get_image (void)
         sh -= xatr.y;
 
         // constrain loupe to window, moving destination if needed
-        CONSTRAIN (sx, sw, xatr.width, dx);
-        CONSTRAIN (sy, sh, xatr.height, dy);
+        if (offset)
+        {
+            Atom type = get_wd_type (dsp, children[wd]);
+            if (xatr.override_redirect == True || type == wt_normal)
+            {
+                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, 10, 10);
+                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 8, 10);
+            }
+            else if (type == wt_dialog)
+            {
+                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, 1, 1);
+                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 1, 1);
+            }
+            else
+            {
+                CONSTRAIN (sx, sw, xatr.width, dx);
+                CONSTRAIN (sy, sh, xatr.height, dy);
+            }
+        }
+        else
+        {
+            CONSTRAIN (sx, sw, xatr.width, dx);
+            CONSTRAIN (sy, sh, xatr.height, dy);
+        }
 
         // convert loupe bounds to width and height
         sw -= sx;
@@ -473,6 +555,7 @@ int main (int argc, char *argv[])
     default_handler = XSetErrorHandler (error_handler);
 
     init_screen ();
+    init_atoms ();
     setup_pixmaps ();
     setup_loupe ();
 
