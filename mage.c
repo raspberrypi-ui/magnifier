@@ -105,6 +105,19 @@ void get_borders (Window wd, int *lb, int *rb, int *tb, int *bb)
     *tb = 0;
     *bb = 0;
 
+    // try to find any GTK frame extents - used for override-redirect windows
+    if (XGetWindowProperty (dsp, wd, XInternAtom (dsp, "_GTK_FRAME_EXTENTS", False), 0L, 4L, False, 
+        XA_CARDINAL, &type, &ret_fmt, &items, &left, &data) == Success && items == 4)
+    {
+        lptr = (long *) data;
+        *lb = lptr[0];
+        *rb = lptr[1];
+        *tb = lptr[2];
+        *bb = lptr[3];
+        XFree (data);
+        return;
+    }
+
     // get the attributes of the parent window
     XGetWindowAttributes (dsp, wd, &wd_att);
 
@@ -196,17 +209,9 @@ void get_image (void)
         // constrain loupe to window, moving destination if needed
         if (offset)
         {
-            if (xatr.override_redirect == True)
-            {
-                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, 6, 6);
-                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 5, 7);
-            }
-            else
-            {
-                get_borders (children[wd], &lb, &rb, &tb, &bb);
-                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, lb, rb);
-                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, tb, bb);
-            }
+            get_borders (children[wd], &lb, &rb, &tb, &bb);
+            CONSTRAIN_BORDER (sx, sw, xatr.width, dx, lb, rb);
+            CONSTRAIN_BORDER (sy, sh, xatr.height, dy, tb, bb);
         }
         else
         {
