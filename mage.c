@@ -207,17 +207,9 @@ void get_image (void)
         sh -= xatr.y;
 
         // constrain loupe to window, moving destination if needed
-        if (offset)
-        {
-            get_borders (children[wd], &lb, &rb, &tb, &bb);
-            CONSTRAIN_BORDER (sx, sw, xatr.width, dx, lb, rb);
-            CONSTRAIN_BORDER (sy, sh, xatr.height, dy, tb, bb);
-        }
-        else
-        {
-            CONSTRAIN (sx, sw, xatr.width, dx);
-            CONSTRAIN (sy, sh, xatr.height, dy);
-        }
+        get_borders (children[wd], &lb, &rb, &tb, &bb);
+        CONSTRAIN_BORDER (sx, sw, xatr.width, dx, lb, rb);
+        CONSTRAIN_BORDER (sy, sh, xatr.height, dy, tb, bb);
 
         // convert loupe bounds to width and height
         sw -= sx;
