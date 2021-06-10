@@ -127,35 +127,53 @@ void init_atoms (void)
 }
 
 
-/* get_wd_type - get the type of the supplied window */
+/* get_borders - calculate the borders added to a standard window by mutter */
 
-Atom get_wd_type (Display *dsp, Window wd)
+void get_borders (Window wd, int *lb, int *rb, int *tb, int *bb)
 {
     Window chroot, *ch, nullwd;
+    XWindowAttributes wd_att, ch_att;
+    int nch;
     Atom type;
-    int ret_fmt, nch;
+    int ret_fmt;
     unsigned long items, left;
     unsigned char *data;
+    long *lptr;
 
-    if (XGetWindowProperty (dsp, wd, XInternAtom (dsp, "_NET_WM_WINDOW_TYPE", FALSE), 0L, 0x7FFFFFFF, False, XA_ATOM, &type, &ret_fmt, &items, &left, &data) == Success
-        && items)
+    *lb = 0;
+    *rb = 0;
+    *tb = 0;
+    *bb = 0;
+
+    // get the attributes of the parent window
+    XGetWindowAttributes (dsp, wd, &wd_att);
+
+    // find if that window has children
+    if (!XQueryTree (dsp, wd, &chroot, &nullwd, &ch, &nch) || nch == 0) return;
+
+    // there is at least one child window, so get its attributes
+    XGetWindowAttributes (dsp, ch[0], &ch_att);
+
+    // now try to get the frame extents of the child
+    if (XGetWindowProperty (dsp, ch[0], XInternAtom (dsp, "_NET_FRAME_EXTENTS", False), 0L, 4L, False, 
+        XA_CARDINAL, &type, &ret_fmt, &items, &left, &data) != Success)
     {
-        type = *((Atom *) data);
-        XFree (data);
-    }
-    else
-    {
-        XQueryTree (dsp, wd, &chroot, &nullwd, &ch, &nch);
-        if (nch && XGetWindowProperty (dsp, ch[0], XInternAtom (dsp, "_NET_WM_WINDOW_TYPE", FALSE), 0L, 0x7FFFFFFF, False, XA_ATOM, &type, &ret_fmt, &items, &left, &data) == Success
-            && items)
-        {
-            type = *((Atom *) data);
-        }
-        else type = 0;
-        XFree (data);
         XFree (ch);
+        return;
     }
-    return type;
+
+    // there is a child window with frame extents, so do the maths
+    if (items == 4)
+    {
+        lptr = (long *) data;
+        *lb = ch_att.x - lptr[0];
+        *tb = ch_att.y - lptr[2];
+        *rb = wd_att.width - ch_att.x - ch_att.width;
+        *bb = wd_att.height - ch_att.y - ch_att.height;
+    }
+
+    XFree (data);
+    XFree (ch);
 }
 
 
@@ -171,6 +189,7 @@ void get_image (void)
     Window root, nullwd, *children;
     int sx, sy, sw, sh, dx, dy, null;
     unsigned int nwins, wd;
+    int lb, rb, tb, bb;
 
     // get the location of the mouse pointer
     XQueryPointer (dsp, rootwin, &root, &nullwd, &posx, &posy, &null, &null, (unsigned *) &null);
@@ -217,21 +236,16 @@ void get_image (void)
         // constrain loupe to window, moving destination if needed
         if (offset)
         {
-            Atom type = get_wd_type (dsp, children[wd]);
-            if (xatr.override_redirect == True || type == wt_normal)
+            if (xatr.override_redirect == True)
             {
-                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, 10, 10);
-                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 8, 10);
-            }
-            else if (type == wt_dialog)
-            {
-                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, 1, 1);
-                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 1, 1);
+                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, 6, 6);
+                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 6, 7);
             }
             else
             {
-                CONSTRAIN (sx, sw, xatr.width, dx);
-                CONSTRAIN (sy, sh, xatr.height, dy);
+                get_borders (children[wd], &lb, &rb, &tb, &bb);
+                CONSTRAIN_BORDER (sx, sw, xatr.width, dx, lb, rb);
+                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, tb, bb);
             }
         }
         else
