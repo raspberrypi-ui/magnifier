@@ -133,9 +133,8 @@ void get_borders (Window wd, int *lb, int *rb, int *tb, int *bb)
 {
     Window chroot, *ch, nullwd;
     XWindowAttributes wd_att, ch_att;
-    int nch;
     Atom type;
-    int ret_fmt;
+    int ret_fmt, nch;
     unsigned long items, left;
     unsigned char *data;
     long *lptr;
