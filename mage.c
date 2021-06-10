@@ -239,7 +239,7 @@ void get_image (void)
             if (xatr.override_redirect == True)
             {
                 CONSTRAIN_BORDER (sx, sw, xatr.width, dx, 6, 6);
-                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 6, 7);
+                CONSTRAIN_BORDER (sy, sh, xatr.height, dy, 5, 7);
             }
             else
             {
