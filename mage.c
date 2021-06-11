@@ -151,8 +151,7 @@ void get_borders (Window wd, int *lb, int *rb, int *tb, int *bb)
 
 /* get_image - construct the image to go in the loupe by copying from each window in turn */
 
-#define CONSTRAIN(lo,hi,max,offset)	 if (lo < 0) { offset += -lo; lo = 0; } if (hi > max) hi = max;
-#define CONSTRAIN_BORDER(lo,hi,max,offset,sbord,fbord)	 if (lo < sbord) { offset += sbord - lo; lo = sbord; } if (hi > max - fbord) hi = max - fbord;
+#define CONSTRAIN(lo,hi,max,offset,sbord,fbord)	 if (lo < sbord) { offset += sbord - lo; lo = sbord; } if (hi > max - fbord) hi = max - fbord;
 
 void get_image (void)
 {
@@ -196,8 +195,8 @@ void get_image (void)
         sh = sy + srch;
 
         // constrain loupe to screen, moving destination if needed
-        CONSTRAIN (sx, sw, screenw, dx);
-        CONSTRAIN (sy, sh, screenh, dy);
+        CONSTRAIN (sx, sw, screenw, dx, 0, 0);
+        CONSTRAIN (sy, sh, screenh, dy, 0, 0);
 
         // convert source to coords relative to window
         sx -= xatr.x;
@@ -207,8 +206,8 @@ void get_image (void)
 
         // constrain loupe to window, moving destination if needed
         get_borders (children[wd], &lb, &rb, &tb, &bb);
-        CONSTRAIN_BORDER (sx, sw, xatr.width, dx, lb, rb);
-        CONSTRAIN_BORDER (sy, sh, xatr.height, dy, tb, bb);
+        CONSTRAIN (sx, sw, xatr.width, dx, lb, rb);
+        CONSTRAIN (sy, sh, xatr.height, dy, tb, bb);
 
         // convert loupe bounds to width and height
         sw -= sx;
