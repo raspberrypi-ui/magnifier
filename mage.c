@@ -143,9 +143,9 @@ void get_borders (Window wd, int *lb, int *rb, int *tb, int *bb)
     {
         lptr = (long *) data;
         *lb = ch_att.x - lptr[0];
+        *rb = wd_att.width - (ch_att.x + ch_att.width) - lptr[1];
         *tb = ch_att.y - lptr[2];
-        *rb = wd_att.width - ch_att.x - ch_att.width;
-        *bb = wd_att.height - ch_att.y - ch_att.height;
+        *bb = wd_att.height - (ch_att.y + ch_att.height) - lptr[3];
     }
 
     XFree (data);
