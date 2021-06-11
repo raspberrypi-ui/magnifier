@@ -366,7 +366,7 @@ void init_screen (void)
     if (posy >= screenh - dsth - 10) posy = screenh - dsth - 10;
 
     // create the window which will be used for the loupe
-    topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 5, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
+    topwin = XCreateSimpleWindow (dsp, rootwin, posx, posy, dstw, dsth, 0, BlackPixel (dsp, scr), WhitePixel (dsp, scr));
     XSelectInput (dsp, topwin, EVENT_MASK);
 
     if (!XCompositeQueryExtension (dsp, &event_base, &error_base))
@@ -570,10 +570,10 @@ int main (int argc, char *argv[])
                     drag = 0;
                     system ("lxpanelctl command magnifier pos");
                 }
-                if (ev.type == MotionNotify && drag) XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
+                if (ev.type == MotionNotify && drag) XMoveWindow (dsp, topwin, posx - (dstw / 2) - offset, posy - (dsth / 2) - offset);
             }
         }
-        else XMoveWindow (dsp, topwin, posx - (dstw / 2) - 5, posy - (dsth / 2) - 5);
+        else XMoveWindow (dsp, topwin, posx - (dstw / 2) - offset, posy - (dsth / 2) - offset);
     }
 
     XCloseDisplay (dsp);
