@@ -118,13 +118,17 @@ void get_borders (Window wd, int *lb, int *rb, int *tb, int *bb)
     }
 
     // get the attributes of the parent window
-    XGetWindowAttributes (dsp, wd, &wd_att);
+    if (!XGetWindowAttributes (dsp, wd, &wd_att)) return;
 
     // find if that window has children
     if (!XQueryTree (dsp, wd, &chroot, &nullwd, &ch, &nch) || nch == 0) return;
 
     // there is at least one child window, so get its attributes
-    XGetWindowAttributes (dsp, ch[0], &ch_att);
+    if (!XGetWindowAttributes (dsp, ch[0], &ch_att))
+    {
+        XFree (ch);
+        return;
+    }
 
     // now try to get the frame extents of the child
     if (XGetWindowProperty (dsp, ch[0], XInternAtom (dsp, "_NET_FRAME_EXTENTS", False), 0L, 4L, False, 
