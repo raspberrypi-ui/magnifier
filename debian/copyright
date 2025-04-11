@@ -1,10 +1,9 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: mage
-Source: 
+Upstream-Name: mage-rpi
+Source: https://github.com/raspberrypi-ui/magnifier/
 
 Files: *
-Copyright: 2016 Simon Long <simon@raspberrypi.org>, 2001-2005 Luciano Silva, Fabio Leite Vieira, Mauricley Ribas Azevedo, Thiago de Souza Ferreira
-
+Copyright: 2016 Simon Long <simon@raspberrypi.com>, 2001-2005 Luciano Silva, Fabio Leite Vieira, Mauricley Ribas Azevedo, Thiago de Souza Ferreira
 License: BSD-3-Clause
 
 License: BSD-3-Clause

@@ -1,14 +1,24 @@
-Source: mage
+Source: mage-rpi
 Section: utils
 Priority: optional
 Maintainer: Simon Long <simon@raspberrypi.com>
-Build-Depends: debhelper (>= 9.0.0), dh-autoreconf, libx11-dev, libxext-dev, libxcomposite-dev, libxrender-dev, libatspi2.0-dev
-Standards-Version: 3.9.6
+Build-Depends: debhelper-compat (= 13), meson, libx11-dev, libxext-dev, libxcomposite-dev, libxrender-dev, libatspi2.0-dev
+Standards-Version: 4.5.1
 Homepage: https://www.raspberrypi.org/
 
-Package: mage
+Package: mage-rpi
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libx11-6, libxext6, libxcomposite1, libxrender1, libatspi2.0-0, lxplug-magnifier
+Replaces: mage (<= 0.3)
+Breaks: mage (<= 0.3)
 Description: Virtual magnifier application
  Provides a window which shows a magnified view of the screen around
  the mouse cursor, with various accessibility functions
+
+Package: mage
+Depends: mage-rpi, ${misc:Depends}
+Architecture: all
+Priority: optional
+Section: oldlibs
+Description: transitional package
+ This is a transitional package. It can safely be removed.

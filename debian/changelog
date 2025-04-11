@@ -1,3 +1,9 @@
+mage-rpi (0.4) bookworm; urgency=medium
+
+  * Package renamed
+
+ -- Simon Long <simon@raspberrypi.com>  Fri, 11 Apr 2025 14:16:31 +0100
+
 mage (0.3) bullseye; urgency=medium
 
   * Remove offset parameter
